@@ -70,6 +70,15 @@ Content-Type: application/json
 	"new_account_type": "{{new_account_type}}"
 }
 
+### valid profile picture url patch
+PATCH {{base_url}}/{{uuid}}
+Content-Type: application/json
+
+{
+	"password": "{{password}}",
+	"new_profile_picture_url": "https://styles.redditmedia.com/t5_2v5h6u/styles/profileIcon_vmfbuhrygxbb1.jpg?width=256&height=256&crop=256:256,smart&s=04fc700caaf056234a0eecfdcc8e53d246f9c7da"
+}
+
 ### valid password patch
 PATCH {{base_url}}/{{uuid}}
 Content-Type: application/json

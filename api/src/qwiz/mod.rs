@@ -1,6 +1,6 @@
 pub mod routes;
 
-use crate::POOL;
+use crate::{POOL, media};
 
 use sqlx::{types::Uuid, postgres::PgQueryResult};
 
@@ -21,7 +21,8 @@ impl Qwiz {
 			Qwiz,
 			"SELECT * FROM qwiz WHERE uuid=$1",
 			uuid
-		).fetch_one(POOL.get().await)
+		)
+		.fetch_one(POOL.get().await)
 		.await
 	
 	}
@@ -32,19 +33,13 @@ impl Qwiz {
 		sqlx::query!(
 			"SELECT uuid FROM account WHERE uuid=$1",
 			creator_uuid
-		).fetch_one(POOL.get().await)
+		)
+		.fetch_one(POOL.get().await)
 		.await?;
 
 		let thumbnail_uuid = match thumbnail_url {
-			Some(url) => Some(
-				sqlx::query!(
-					"INSERT INTO media (path) VALUES ($1) RETURNING uuid",
-					url
-				).fetch_one(POOL.get().await)
-				.await?
-				.uuid
-			),
-			None => None
+			Some(url) => Some(media::upload(url).await?),
+			None => None,
 		};
 
 		sqlx::query_as!(
@@ -53,17 +48,23 @@ impl Qwiz {
 			name,
 			creator_uuid,
 			thumbnail_uuid,
-		).fetch_one(POOL.get().await)
+		)
+		.fetch_one(POOL.get().await)
 		.await
 
 	}
 	
 	pub async fn delete(self) -> Result<PgQueryResult, sqlx::Error> {
 
+		if let Some(uuid) = self.thumbnail_uuid {
+			media::delete(uuid).await?;
+		}
+
 		sqlx::query!(
 			"DELETE FROM qwiz WHERE uuid=$1",
 			self.uuid
-		).execute(POOL.get().await)
+		)
+		.execute(POOL.get().await)
 		.await
 
 	}
@@ -74,37 +75,25 @@ impl Qwiz {
 			"UPDATE qwiz SET name=$1 WHERE uuid=$2 RETURNING name",
 			new_name,
 			self.uuid,
-		).fetch_one(POOL.get().await)
+		)
+		.fetch_one(POOL.get().await)
 		.await?
 		.name;
 
 		Ok(())
 
 	}
-	pub async fn update_thumbnail(&mut self, new_thumbnail_url: &String) -> Result<(), sqlx::Error> {
+	pub async fn update_thumbnail_url(&mut self, new_thumbnail_url: &String) -> Result<PgQueryResult, sqlx::Error> {
 
-		match self.thumbnail_uuid {
-			Some(uuid) => {
-				sqlx::query!(
-					"UPDATE media SET path=$1 WHERE uuid=$2",
-					new_thumbnail_url,
-					uuid
-				).execute(POOL.get().await)
-				.await?;
-			},
-			None => {
-				self.thumbnail_uuid = Some(
-					sqlx::query!(
-						"INSERT INTO media (path) VALUES ($1) RETURNING uuid",
-						new_thumbnail_url
-					).fetch_one(POOL.get().await)
-					.await?
-					.uuid
-				);
-			},
-		};
+		media::update(&mut self.thumbnail_uuid, new_thumbnail_url).await?;
 
-		Ok(())
+		sqlx::query!(
+			"UPDATE qwiz SET thumbnail_uuid=$1 WHERE uuid=$2",
+			self.thumbnail_uuid,
+			self.uuid,
+		)
+		.execute(POOL.get().await)
+		.await
 
 	}
 

@@ -34,12 +34,13 @@ POST /account - create an account using json
 "username": String - required
 "password": String - required
 "account_type": AccountType - required
-"profile_picture_uuid": Uuid - optional
+"profile_picture_url": String - optional
 
 PATCH /account/<uuid> - update account data using json
 "password": String - required
 "new_password": String - optional
 "new_account_type": AccountType - optional
+"new_profile_picture_url": String - optional
 
 DELETE /account/<uuid> - delete account using json
 "password": String - required
@@ -96,12 +97,13 @@ struct PostAccountData {
 	username: String,
 	password: String,
 	account_type: AccountType,
+	profile_picture_url: Option<String>,
 }
 
 #[post("/account", data = "<account_data>")]
 async fn new_account(account_data: Json<PostAccountData>) -> Result<String, Status> {
 
-	match Account::new(&account_data.username, &account_data.password, &account_data.account_type).await {
+	match Account::new(&account_data.username, &account_data.password, &account_data.account_type, &account_data.profile_picture_url).await {
 		Ok(account) => Ok(account.uuid.to_string()),
 		Err(_) => Err(Status::Conflict),
 	}
@@ -115,6 +117,7 @@ struct PatchAccountData {
 	password: String,
 	new_password: Option<String>,
 	new_account_type: Option<AccountType>,
+	new_profile_picture_url: Option<String>,
 }
 
 #[patch("/account/<id>", data = "<new_account_data>")]
@@ -134,6 +137,12 @@ async fn update_account(id: Uuid, new_account_data: Json<PatchAccountData>) -> S
 
 						if let Some(new_password) = &new_account_data.new_password {
 							if account.update_password(new_password).await.is_err() {
+								return Status::BadRequest;
+							}
+						}
+
+						if let Some(new_profile_picture_url) = &new_account_data.new_profile_picture_url {
+							if account.update_profile_picture_url(new_profile_picture_url).await.is_err() {
 								return Status::BadRequest;
 							}
 						}

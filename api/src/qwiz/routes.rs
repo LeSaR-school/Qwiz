@@ -140,7 +140,7 @@ async fn update_qwiz(id: Uuid, new_qwiz_data: Json<PatchQwizData>) -> Status {
 						}
 
 						if let Some(new_thumbnail_url) = &new_qwiz_data.new_thumbnail_url {
-							if qwiz.update_thumbnail(new_thumbnail_url).await.is_err() {
+							if qwiz.update_thumbnail_url(new_thumbnail_url).await.is_err() {
 								return Status::BadRequest;
 							}
 						}

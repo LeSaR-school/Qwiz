@@ -1,6 +1,7 @@
 mod account;
-mod crypto;
 mod qwiz;
+mod media;
+mod crypto;
 
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate lazy_static;
@@ -41,6 +42,7 @@ fn rocket() -> _ {
 	let mut routes = routes![root_info];
 	routes.append(&mut account::routes::all());
 	routes.append(&mut qwiz::routes::all());
+	routes.append(&mut media::routes::all());
 
 	rocket::build()
 		.register(BASE_URL, catchers![default_catcher])
@@ -59,5 +61,7 @@ fn default_catcher(status: Status, _req: &Request) -> String {
 fn root_info() -> &'static str {
 r#"
 /account
+/qwiz
+/media
 "#
 }
