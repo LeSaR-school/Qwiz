@@ -1,0 +1,50 @@
+# these are test requests for /api/question
+
+@base_url = http://localhost:8000/api/question
+
+# fill in after creating an account
+@creator_password = password123
+
+# fill in after creating a qwiz
+@qwiz_uuid = a076b4a9-2d53-49e4-8381-38f215797250
+
+
+
+### info
+GET {{base_url}}
+
+### get first question
+GET {{base_url}}/{{qwiz_uuid}}/0
+
+### create a new question
+POST {{base_url}}/{{qwiz_uuid}}
+
+{
+	"creator_password": "{{creator_password}}",
+	"question": {
+		"body": "q2",
+		"answer1": "True",
+		"answer2": "False",
+		"answer3": "IDFK",
+		"correct": 3,
+		"embed_url": "https://static.vecteezy.com/system/resources/previews/012/174/061/original/3d-question-mark-free-png.png"
+	}
+}
+
+### get created question
+GET {{base_url}}/{{qwiz_uuid}}/1
+
+### patch the first question
+PATCH {{base_url}}/{{qwiz_uuid}}/0
+
+{
+	"creator_password": "{{creator_password}}",
+	"new_embed_url": "https://freepngimg.com/save/72547-thinking-photography-question-mark-man-stock/4500x4500"
+}
+
+### delete the first question
+DELETE {{base_url}}/{{qwiz_uuid}}/0
+
+{
+	"creator_password": "{{creator_password}}"
+}

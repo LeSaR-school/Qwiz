@@ -1,6 +1,7 @@
+use crate::BASE_URL;
 use crate::account::{Account, AccountType};
-use crate::crypto::*;
-use rocket::response::status::BadRequest;
+use crate::crypto::verify_password;
+use rocket::response::status::{BadRequest, Created};
 use rocket::{Route, Either};
 use rocket::{http::Status, serde::json::Json};
 use serde::{Deserialize, Serialize};
@@ -12,9 +13,9 @@ pub fn all() -> Vec<Route> {
 
 	routes![
 		account_info,
-		get_account_by_id,
+		get_account_by_uuid,
 		get_account_by_username,
-		new_account,
+		create_account,
 		update_account,
 		delete_account,
 	]
@@ -31,19 +32,19 @@ enum AccountType { "Student", "Parent", "Teacher" }
 GET /account/<uuid> - get account data by uuid
 GET /account/<username> - get account data by username
 
-POST /account - create an account using json
+POST /account - create an account
 "username": String - required
 "password": String - required
 "account_type": AccountType - required
 "profile_picture_url": String - optional
 
-PATCH /account/<uuid> - update account data using json
+PATCH /account/<uuid> - update account data
 "password": String - required
 "new_password": String - optional
 "new_account_type": AccountType - optional
 "new_profile_picture_url": String - optional
 
-DELETE /account/<uuid> - delete account using json
+DELETE /account/<uuid> - delete account
 "password": String - required
 
 "#
@@ -72,7 +73,7 @@ impl GetAccountData {
 }
 
 #[get("/account/<id>", rank = 1)]
-async fn get_account_by_id(id: Uuid) -> Result<Json<GetAccountData>, Status> {
+async fn get_account_by_uuid(id: Uuid) -> Result<Json<GetAccountData>, Status> {
 
 	match Account::get_by_id(&id).await {
 		Ok(account) => Ok(Json(GetAccountData::from_account(account))),
@@ -102,11 +103,11 @@ struct PostAccountData {
 }
 
 #[post("/account", data = "<account_data>")]
-async fn new_account(account_data: Json<PostAccountData>) -> Status {
+async fn create_account(account_data: Json<PostAccountData>) -> Result<Created<String>, Status> {
 
 	match Account::new(&account_data.username, &account_data.password, &account_data.account_type, &account_data.profile_picture_url).await {
-		Ok(_) => Status::Created,
-		Err(_) => Status::Conflict,
+		Ok(account) => Ok(Created::new(format!("{}/account/{}", BASE_URL, account.uuid.to_string()))),
+		Err(_) => Err(Status::Conflict),
 	}
 
 }

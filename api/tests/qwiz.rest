@@ -4,23 +4,38 @@
 
 @name = test qwiz
 
-# fill in after first post
-@creator_uuid = ebe5b0a4-903f-4f78-bc57-7c5361c38315
+# fill in after creating an account
+@creator_uuid = aeaaa2e3-daa3-4c53-a8dc-5a32e749a776
 @creator_password = password123
 
-@uuid = d02c13eb-1ea6-4c2f-8ec6-76cf4a25c072
+@uuid = a076b4a9-2d53-49e4-8381-38f215797250
 
 
+
+### info
+GET {{base_url}}
+
+### get
+GET {{base_url}}/{{uuid}}
 
 ### create
 POST {{base_url}}
-Content-Type: application/json
 
 {
-	"name": "{{name}}",
-	"creator_uuid": "{{creator_uuid}}",
 	"creator_password": "{{creator_password}}",
-	"thumbnail_url": "https://img.freepik.com/free-photo/red-white-cat-i-white-studio_155003-13189.jpg?w=2000"
+	"qwiz": {
+		"name": "{{name}}",
+		"creator_uuid": "{{creator_uuid}}",
+		"thumbnail_url": "https://img.freepik.com/free-photo/red-white-cat-i-white-studio_155003-13189.jpg?w=2000"
+	},
+	"questions": [
+		{
+			"body": "q1",
+			"answer1": "t",
+			"answer2": "f",
+			"correct": 1
+		}
+	]
 }
 
 
@@ -32,7 +47,6 @@ GET {{base_url}}/{{uuid}}
 
 ### invalid patch - id
 PATCH {{base_url}}/00000000-0000-0000-0000-000000000000
-Content-Type: application/json
 
 {
 	"creator_password": "1",
@@ -41,7 +55,6 @@ Content-Type: application/json
 
 ### invalid patch - password
 PATCH {{base_url}}/{{uuid}}
-Content-Type: application/json
 
 {
 	"creator_password": "1",
@@ -50,7 +63,6 @@ Content-Type: application/json
 
 ### valid name patch
 PATCH {{base_url}}/{{uuid}}
-Content-Type: application/json
 
 {
 	"creator_password": "{{creator_password}}",
@@ -59,7 +71,6 @@ Content-Type: application/json
 
 ### valid thumbnail url patch
 PATCH {{base_url}}/{{uuid}}
-Content-Type: application/json
 
 {
 	"creator_password": "{{creator_password}}",
@@ -70,7 +81,6 @@ Content-Type: application/json
 
 ### invalid delete - id
 DELETE {{base_url}}/00000000-0000-0000-0000-000000000000
-Content-Type: application/json
 
 {
 	"creator_password": "1"
@@ -78,7 +88,6 @@ Content-Type: application/json
 
 ### invalid delete - password
 DELETE {{base_url}}/{{uuid}}
-Content-Type: application/json
 
 {
 	"creator_password": "1"
@@ -86,7 +95,6 @@ Content-Type: application/json
 
 ### valid delete
 DELETE {{base_url}}/{{uuid}}
-Content-Type: application/json
 
 {
 	"creator_password": "{{creator_password}}"

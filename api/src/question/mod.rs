@@ -3,10 +3,20 @@ pub mod routes;
 use crate::POOL;
 use crate::media;
 
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
-use self::routes::PostQuestionData;
+#[derive(Deserialize)]
+pub struct NewQuestionData {
+	pub index: Option<i32>,
+	pub body: String,
+	pub answer1: String,
+	pub answer2: String,
+	pub answer3: Option<String>,
+	pub answer4: Option<String>,
+	pub correct: i32,
+	pub embed_url: Option<String>,
+}
 
 #[derive(Serialize)]
 pub struct Question {
@@ -27,7 +37,7 @@ impl Question {
 
 		sqlx::query_as!(
 			Question,
-			r#"SELECT * FROM question WHERE qwiz_uuid=$1 AND index=$2"#,
+			"SELECT * FROM question WHERE qwiz_uuid=$1 AND index=$2",
 			qwiz_uuid,
 			index,
 		)
@@ -39,26 +49,26 @@ impl Question {
 
 		sqlx::query_as!(
 			Question,
-			r#"SELECT * FROM question WHERE qwiz_uuid=$1 ORDER BY index ASC"#,
+			"SELECT * FROM question WHERE qwiz_uuid=$1 ORDER BY index ASC",
 			qwiz_uuid,
 		)
 		.fetch_all(POOL.get().await)
 		.await
 	
 	}
-	
-	pub async fn new(qwiz_uuid: &Uuid, body: &String, answer1: &String, answer2: &String, answer3: &Option<String>, answer4: &Option<String>, correct: &i32, embed_url: &Option<String>, index: &Option<i32>) -> Result<Self, sqlx::Error> {
 
-		let embed_uuid = match embed_url {
+	pub async fn from_question_data(qwiz_uuid: &Uuid, data: &NewQuestionData) -> Result<Self, sqlx::Error> {
+
+		let embed_uuid = match &data.embed_url {
 			Some(url) => Some(media::upload(url).await?),
 			None => None
 		};
 
-		let real_index = match index {
+		let real_index = match &data.index {
 			Some(index) => {	
 				// shift all existing questions after current index by 1
 				sqlx::query!(
-					r#"UPDATE question SET index=index+1 WHERE index>=$1 AND qwiz_uuid=$2"#,
+					"UPDATE question SET index=index+1 WHERE index>=$1 AND qwiz_uuid=$2",
 					index,
 					qwiz_uuid,
 				)
@@ -85,12 +95,12 @@ impl Question {
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *"#,
 			qwiz_uuid,
 			real_index,
-			body,
-			answer1,
-			answer2,
-			*answer3,
-			*answer4,
-			correct,
+			data.body,
+			data.answer1,
+			data.answer2,
+			data.answer3,
+			data.answer4,
+			data.correct,
 			embed_uuid,
 		)
 		.fetch_one(POOL.get().await)
@@ -99,9 +109,42 @@ impl Question {
 		Ok(question)
 
 	}
-	pub async fn from_question_data(qwiz_uuid: &Uuid, question_data: &PostQuestionData) -> Result<Self, sqlx::Error> {
+	pub async fn from_question_datas(qwiz_uuid: &Uuid, datas: &Vec<NewQuestionData>) -> Result<Vec<Self>, sqlx::Error> {
 
-		Self::new(&qwiz_uuid, &question_data.body, &question_data.answer1, &question_data.answer2, &question_data.answer3, &question_data.answer4, &question_data.correct, &question_data.embed_url, &question_data.index).await
+		let indexes: Vec<i32> = (0..datas.len()).map(|n| n as i32).collect();
+		let bodies: Vec<String> = datas.iter().map(|d| d.body.to_owned()).collect();
+		let answers1: Vec<String> = datas.iter().map(|d| d.answer1.to_owned()).collect();
+		let answers2: Vec<String> = datas.iter().map(|d| d.answer2.to_owned()).collect();
+		let answers3: Vec<String> = datas.iter().map(|d| d.answer3.to_owned().unwrap_or("".to_owned())).collect();
+		let answers4: Vec<String> = datas.iter().map(|d| d.answer4.to_owned().unwrap_or("".to_owned())).collect();
+		let corrects: Vec<i32> = datas.iter().map(|d| d.correct).collect();
+		let embed_uuids: Vec<Uuid> = media::upload_multiple(
+			datas.iter().map(|d| d.embed_url.to_owned()).collect::<Vec<Option<String>>>()
+		)
+		.await?
+		.iter()
+		.map(|u| u.unwrap_or(Uuid::default()))
+		.collect();
+
+		sqlx::query_as!(
+			Question,
+			r#"INSERT INTO question (qwiz_uuid, index, body, answer1, answer2, answer3, answer4, correct, embed_uuid)
+			SELECT $1, index, body, answer1, answer2, NULLIF(answer3, ''), NULLIF(answer4, ''), correct, NULLIF(embed_uuid, uuid_nil())
+			FROM UNNEST($2::INTEGER[], $3::VARCHAR[], $4::VARCHAR[], $5::VARCHAR[], $6::VARCHAR[], $7::VARCHAR[], $8::INTEGER[], $9::UUID[])
+			AS t(index, body, answer1, answer2, answer3, answer4, correct, embed_uuid)
+			RETURNING *"#,
+			qwiz_uuid,
+			&indexes,
+			&bodies,
+			&answers1,
+			&answers2,
+			&answers3,
+			&answers4,
+			&corrects,
+			&embed_uuids,
+		)
+		.fetch_all(POOL.get().await)
+		.await
 
 	}
 
@@ -148,7 +191,7 @@ impl Question {
 
 			// shift all questions in (curr_idx; new_idx] down by 1
 			sqlx::query!(
-				r#"UPDATE question SET index=index-1 WHERE index>$1 AND index<=$2 AND qwiz_uuid=$3"#,
+				"UPDATE question SET index=index-1 WHERE index>$1 AND index<=$2 AND qwiz_uuid=$3",
 				self.index,
 				new_index,
 				self.qwiz_uuid,
@@ -234,7 +277,7 @@ impl Question {
 		Ok(())
 
 	}
-	pub async fn update_answer(&mut self, answer_number: u8, new_answer: &String) -> Result<bool, sqlx::Error> {
+	pub async fn update_answer(&mut self, answer_number: &u8, new_answer: &String) -> Result<bool, sqlx::Error> {
 
 		match answer_number {
 			1 => {

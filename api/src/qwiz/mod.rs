@@ -2,9 +2,17 @@ pub mod routes;
 
 use crate::{POOL, media};
 
+use serde::Deserialize;
 use sqlx::{types::Uuid, postgres::PgQueryResult};
 
 
+
+#[derive(Deserialize)]
+pub struct NewQwizData {
+	pub name: String,
+	pub creator_uuid: Uuid,
+	pub thumbnail_url: Option<String>
+}
 
 pub struct Qwiz {
 	uuid: Uuid,
@@ -27,17 +35,17 @@ impl Qwiz {
 	
 	}
 
-	pub async fn new(name: &String, creator_uuid: &Uuid, thumbnail_url: &Option<String>) -> Result<Self, sqlx::Error> {
+	pub async fn from_qwiz_data(data: &NewQwizData) -> Result<Self, sqlx::Error> {
 
 		// check if creator uuid exists
 		sqlx::query!(
 			"SELECT uuid FROM account WHERE uuid=$1",
-			creator_uuid
+			&data.creator_uuid
 		)
 		.fetch_one(POOL.get().await)
 		.await?;
 
-		let thumbnail_uuid = match thumbnail_url {
+		let thumbnail_uuid = match &data.thumbnail_url {
 			Some(url) => Some(media::upload(url).await?),
 			None => None,
 		};
@@ -45,15 +53,15 @@ impl Qwiz {
 		sqlx::query_as!(
 			Qwiz,
 			"INSERT INTO qwiz (name, creator_uuid, thumbnail_uuid) VALUES ($1, $2, $3) RETURNING *",
-			name,
-			creator_uuid,
+			&data.name,
+			&data.creator_uuid,
 			thumbnail_uuid,
 		)
 		.fetch_one(POOL.get().await)
 		.await
 
 	}
-	
+
 	pub async fn delete(self) -> Result<(), sqlx::Error> {
 
 		if let Some(uuid) = self.thumbnail_uuid {

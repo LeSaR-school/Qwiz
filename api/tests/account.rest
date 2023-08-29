@@ -10,13 +10,15 @@
 @new_account_type = Parent
 
 # fill in after first post
-@uuid = e7bd2f1d-7cc0-4d6c-be41-04703a49f886
+@uuid = aeaaa2e3-daa3-4c53-a8dc-5a32e749a776
 
 
+
+### info
+GET {{base_url}}
 
 ### create
 POST {{base_url}}
-Content-Type: application/json
 
 {
 	"username": "{{username}}",
@@ -36,7 +38,6 @@ GET {{base_url}}/{{username}}
 
 ### invalid patch - id
 PATCH {{base_url}}/00000000-0000-0000-0000-000000000000
-Content-Type: application/json
 
 {
 	"password": "1",
@@ -45,7 +46,6 @@ Content-Type: application/json
 
 ### invalid patch - password
 PATCH {{base_url}}/{{uuid}}
-Content-Type: application/json
 
 {
 	"password": "1",
@@ -54,7 +54,6 @@ Content-Type: application/json
 
 ### invalid account type patch
 PATCH {{base_url}}/{{uuid}}
-Content-Type: application/json
 
 {
 	"password": "{{password}}",
@@ -63,7 +62,6 @@ Content-Type: application/json
 
 ### valid account type patch
 PATCH {{base_url}}/{{uuid}}
-Content-Type: application/json
 
 {
 	"password": "{{password}}",
@@ -72,7 +70,6 @@ Content-Type: application/json
 
 ### valid profile picture url patch
 PATCH {{base_url}}/{{uuid}}
-Content-Type: application/json
 
 {
 	"password": "{{password}}",
@@ -81,7 +78,6 @@ Content-Type: application/json
 
 ### valid password patch
 PATCH {{base_url}}/{{uuid}}
-Content-Type: application/json
 
 {
 	"password": "{{password}}",
@@ -92,7 +88,6 @@ Content-Type: application/json
 
 ### invalid delete - id
 DELETE {{base_url}}/00000000-0000-0000-0000-000000000000
-Content-Type: application/json
 
 {
 	"password": "1"
@@ -100,7 +95,6 @@ Content-Type: application/json
 
 ### invalid delete - password
 DELETE {{base_url}}/{{uuid}}
-Content-Type: application/json
 
 {
 	"password": "1"
@@ -108,7 +102,6 @@ Content-Type: application/json
 
 ### valid delete
 DELETE {{base_url}}/{{uuid}}
-Content-Type: application/json
 
 {
 	"password": "{{new_password}}"
