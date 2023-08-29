@@ -20,9 +20,9 @@ pub struct NewQwizData {
 
 
 pub enum QwizError {
-	SqlxError(sqlx::Error),
-	Base64Error(base64::DecodeError),
-	IOError(std::io::Error),
+	Sqlx(sqlx::Error),
+	Base64(base64::DecodeError),
+	IO(std::io::Error),
 }
 impl Display for QwizError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -30,35 +30,35 @@ impl Display for QwizError {
 		use QwizError::*;
 		
 		match self {
-			SqlxError(e) => e.fmt(f),
-			Base64Error(e) => e.fmt(f),
-			IOError(e) => e.fmt(f),
+			Sqlx(e) => e.fmt(f),
+			Base64(e) => e.fmt(f),
+			IO(e) => e.fmt(f),
 		}
 
 	}
 }
 impl From<sqlx::Error> for QwizError {
 	fn from(value: sqlx::Error) -> Self {
-		Self::SqlxError(value)
+		Self::Sqlx(value)
 	}
 }
 impl From<base64::DecodeError> for QwizError {
 	fn from(value: base64::DecodeError) -> Self {
-		Self::Base64Error(value)
+		Self::Base64(value)
 	}
 }
 impl From<std::io::Error> for QwizError {
 	fn from(value: std::io::Error) -> Self {
-		Self::IOError(value)
+		Self::IO(value)
 	}
 }
 impl From<MediaError> for QwizError {
 	fn from(value: MediaError) -> Self {
 		
 		match value {
-			MediaError::SqlxError(e) => QwizError::SqlxError(e),
-			MediaError::Base64Error(e) => QwizError::Base64Error(e),
-			MediaError::IOError(e) => QwizError::IOError(e),
+			MediaError::Sqlx(e) => QwizError::Sqlx(e),
+			MediaError::Base64(e) => QwizError::Base64(e),
+			MediaError::IO(e) => QwizError::IO(e),
 		}
 
 	}

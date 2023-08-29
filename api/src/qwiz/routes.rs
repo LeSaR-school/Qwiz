@@ -229,14 +229,14 @@ async fn update_qwiz(id: i32, new_qwiz_data: Json<PatchQwizData>) -> Result<Stat
 
 				match qwiz.update_thumbnail(new_thumbnail).await {
 					Ok(_) => (),
-					Err(SqlxError(e)) => {
+					Err(Sqlx(e)) => {
 						
 						eprintln!("{e}");
 						return Err(Left(Status::InternalServerError))
 
 					},
-					Err(Base64Error(_)) => return Err(Right(BadRequest(Some("Bad thumbnail base64")))),
-					Err(IOError(e)) => {
+					Err(Base64(_)) => return Err(Right(BadRequest(Some("Bad thumbnail base64")))),
+					Err(IO(e)) => {
 						
 						eprintln!("{e}");
 						return Err(Left(Status::InternalServerError))

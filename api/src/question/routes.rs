@@ -252,14 +252,14 @@ async fn update_question(qwiz_id: i32, index: i32, new_question_data: Json<Patch
 
 				match question.update_embed(new_embed).await {
 					Ok(_) => (),
-					Err(SqlxError(e)) => {
+					Err(Sqlx(e)) => {
 						
 						eprintln!("{e}");
 						return Err(Left(Status::InternalServerError))
 
 					},
-					Err(Base64Error(_)) => return Err(Right(BadRequest(Some("Bad embed base64")))),
-					Err(IOError(e)) => {
+					Err(Base64(_)) => return Err(Right(BadRequest(Some("Bad embed base64")))),
+					Err(IO(e)) => {
 						
 						eprintln!("{e}");
 						return Err(Left(Status::InternalServerError))

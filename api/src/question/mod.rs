@@ -4,6 +4,7 @@ pub mod routes;
 
 use crate::POOL;
 use crate::media::{Media, NewMediaData, MediaError};
+use std::cmp::Ordering;
 use std::fmt::Display;
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
@@ -25,9 +26,9 @@ pub struct NewQuestionData {
 
 
 pub enum QuestionError {
-	SqlxError(sqlx::Error),
-	Base64Error(base64::DecodeError),
-	IOError(std::io::Error),
+	Sqlx(sqlx::Error),
+	Base64(base64::DecodeError),
+	IO(std::io::Error),
 }
 impl Display for QuestionError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -35,25 +36,25 @@ impl Display for QuestionError {
 		use QuestionError::*;
 		
 		match self {
-			SqlxError(e) => e.fmt(f),
-			Base64Error(e) => e.fmt(f),
-			IOError(e) => e.fmt(f),
+			Sqlx(e) => e.fmt(f),
+			Base64(e) => e.fmt(f),
+			IO(e) => e.fmt(f),
 		}
 
 	}
 }
 impl From<sqlx::Error> for QuestionError {
 	fn from(value: sqlx::Error) -> Self {
-		Self::SqlxError(value)
+		Self::Sqlx(value)
 	}
 }
 impl From<MediaError> for QuestionError {
 	fn from(value: MediaError) -> Self {
 		
 		match value {
-			MediaError::SqlxError(e) => QuestionError::SqlxError(e),
-			MediaError::Base64Error(e) => QuestionError::Base64Error(e),
-			MediaError::IOError(e) => QuestionError::IOError(e),
+			MediaError::Sqlx(e) => QuestionError::Sqlx(e),
+			MediaError::Base64(e) => QuestionError::Base64(e),
+			MediaError::IO(e) => QuestionError::IO(e),
 		}
 
 	}
@@ -176,7 +177,7 @@ impl Question {
 		let embed_uuids: Vec<Uuid> = Media::from_media_datas(medias)
 			.await?
 			.into_iter()
-			.map(|m| m.map_or(Uuid::default(), |m| m.uuid.clone()))
+			.map(|m| m.map_or(Uuid::default(), |m| m.uuid))
 			.collect();
 
 		sqlx::query_as!(
@@ -219,90 +220,93 @@ impl Question {
 	}
 
 	pub async fn update_index(&mut self, new_index: &i32) -> Result<bool, sqlx::Error> {
+		use Ordering::*;
 
-		if *new_index == self.index {
-			Ok(false)
-		} else if *new_index > self.index {
+		match new_index.cmp(&self.index) {
+			Equal => Ok(false),
+			Greater => {
 
-			// temporarily delete the current question
-			sqlx::query!(
-				"DELETE FROM question WHERE qwiz_id=$1 AND index=$2",
-				self.qwiz_id,
-				self.index,
-			)
-			.execute(POOL.get().await)
-			.await?;
+				// temporarily delete the current question
+				sqlx::query!(
+					"DELETE FROM question WHERE qwiz_id=$1 AND index=$2",
+					self.qwiz_id,
+					self.index,
+				)
+				.execute(POOL.get().await)
+				.await?;
 
-			// shift all questions in (curr_idx; new_idx] down by 1
-			sqlx::query!(
-				"UPDATE question SET index=index-1 WHERE index>$1 AND index<=$2 AND qwiz_id=$3",
-				self.index,
-				new_index,
-				self.qwiz_id,
-			)
-			.execute(POOL.get().await)
-			.await?;
+				// shift all questions in (curr_idx; new_idx] down by 1
+				sqlx::query!(
+					"UPDATE question SET index=index-1 WHERE index>$1 AND index<=$2 AND qwiz_id=$3",
+					self.index,
+					new_index,
+					self.qwiz_id,
+				)
+				.execute(POOL.get().await)
+				.await?;
 
-			// re-insert the current question at the new index
-			self.index = sqlx::query!(
-				r#"INSERT INTO question (qwiz_id, index, body, answer1, answer2, answer3, answer4, correct, embed_uuid)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING index"#,
-				self.qwiz_id,
-				new_index,
-				self.body,
-				self.answer1,
-				self.answer2,
-				self.answer3,
-				self.answer4,
-				self.correct,
-				self.embed_uuid,
-			)
-			.fetch_one(POOL.get().await)
-			.await?
-			.index;
+				// re-insert the current question at the new index
+				self.index = sqlx::query!(
+					r#"INSERT INTO question (qwiz_id, index, body, answer1, answer2, answer3, answer4, correct, embed_uuid)
+					VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING index"#,
+					self.qwiz_id,
+					new_index,
+					self.body,
+					self.answer1,
+					self.answer2,
+					self.answer3,
+					self.answer4,
+					self.correct,
+					self.embed_uuid,
+				)
+				.fetch_one(POOL.get().await)
+				.await?
+				.index;
 
-			Ok(true)
+				Ok(true)
 
-		} else {
+			},
+			Less => {
 
-			// temporarily delete the current question
-			sqlx::query!(
-				r#"DELETE FROM question WHERE qwiz_id=$1 AND index=$2"#,
-				self.qwiz_id,
-				self.index,
-			)
-			.execute(POOL.get().await)
-			.await?;
+				// temporarily delete the current question
+				sqlx::query!(
+					r#"DELETE FROM question WHERE qwiz_id=$1 AND index=$2"#,
+					self.qwiz_id,
+					self.index,
+				)
+				.execute(POOL.get().await)
+				.await?;
 
-			// shift all questions in [new_idx; curr_idx) up by 1
-			sqlx::query!(
-				r#"UPDATE question SET index=index+1 WHERE index>=$1 AND index<$2 AND qwiz_id=$3"#,
-				new_index,
-				self.index,
-				self.qwiz_id,
-			)
-			.execute(POOL.get().await)
-			.await?;
+				// shift all questions in [new_idx; curr_idx) up by 1
+				sqlx::query!(
+					r#"UPDATE question SET index=index+1 WHERE index>=$1 AND index<$2 AND qwiz_id=$3"#,
+					new_index,
+					self.index,
+					self.qwiz_id,
+				)
+				.execute(POOL.get().await)
+				.await?;
 
-			// re-insert the current question at the new index
-			self.index = sqlx::query!(
-				r#"INSERT INTO question (qwiz_id, index, body, answer1, answer2, answer3, answer4, embed_uuid)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING index"#,
-				self.qwiz_id,
-				new_index,
-				self.body,
-				self.answer1,
-				self.answer2,
-				self.answer3,
-				self.answer4,
-				self.embed_uuid,
-			)
-			.fetch_one(POOL.get().await)
-			.await?
-			.index;
+				// re-insert the current question at the new index
+				self.index = sqlx::query!(
+					r#"INSERT INTO question (qwiz_id, index, body, answer1, answer2, answer3, answer4, embed_uuid)
+					VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING index"#,
+					self.qwiz_id,
+					new_index,
+					self.body,
+					self.answer1,
+					self.answer2,
+					self.answer3,
+					self.answer4,
+					self.embed_uuid,
+				)
+				.fetch_one(POOL.get().await)
+				.await?
+				.index;
 
-			Ok(true)
+				Ok(true)
 
+			},
 		}
 
 	}

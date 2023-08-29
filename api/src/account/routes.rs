@@ -124,7 +124,7 @@ struct PostAccountData {
 async fn create_account(account_data: Json<PostAccountData>) -> Result<Created<String>, Status> {
 
 	match Account::new(&account_data.username, &account_data.password, &account_data.account_type, &account_data.profile_picture).await {
-		Ok(account) => Ok(Created::new(format!("{BASE_URL}/account/{}", account.id.to_string()))),
+		Ok(account) => Ok(Created::new(format!("{BASE_URL}/account/{}", account.id))),
 		Err(e) => {
 			
 			eprintln!("{e}");
@@ -179,14 +179,14 @@ async fn update_account(id: i32, new_account_data: Json<PatchAccountData>) -> Re
 				
 				match account.update_profile_picture(new_profile_picture).await {
 					Ok(_) => (),
-					Err(SqlxError(e)) => {
+					Err(Sqlx(e)) => {
 						
 						eprintln!("{e}");
 						return Err(Left(Status::InternalServerError))
 
 					},
-					Err(Base64Error(_)) => return Err(Right(BadRequest(Some("Bad thumbnail base64")))),
-					Err(IOError(e)) => {
+					Err(Base64(_)) => return Err(Right(BadRequest(Some("Bad thumbnail base64")))),
+					Err(IO(e)) => {
 						
 						eprintln!("{e}");
 						return Err(Left(Status::InternalServerError))

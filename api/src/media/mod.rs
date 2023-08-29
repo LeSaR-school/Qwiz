@@ -68,19 +68,19 @@ impl NewMediaData {
 				match fs::OpenOptions::new()
 					.create(true)
 					.write(true)
-					.open(&path)
+					.open(path)
 				{
 					Ok(mut file) => {
 						match file.write_all(&binary) {
 							Ok(_) => Ok(format!("{BASE_URL}/media/upload/{uuid}.{}", self.media_type.to_file_extension())),
-							Err(e) => Err(IOError(e)),
+							Err(e) => Err(IO(e)),
 						}
 					},
-					Err(e) => Err(IOError(e)),
+					Err(e) => Err(IO(e)),
 				}
 
 			},
-			Err(e) => Err(Base64Error(e)),
+			Err(e) => Err(Base64(e)),
 		}
 
 	}
@@ -90,9 +90,9 @@ impl NewMediaData {
 
 
 pub enum MediaError {
-	SqlxError(sqlx::Error),
-	Base64Error(base64::DecodeError),
-	IOError(std::io::Error),
+	Sqlx(sqlx::Error),
+	Base64(base64::DecodeError),
+	IO(std::io::Error),
 }
 impl Display for MediaError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -100,26 +100,26 @@ impl Display for MediaError {
 		use MediaError::*;
 		
 		match self {
-			SqlxError(e) => e.fmt(f),
-			Base64Error(e) => e.fmt(f),
-			IOError(e) => e.fmt(f),
+			Sqlx(e) => e.fmt(f),
+			Base64(e) => e.fmt(f),
+			IO(e) => e.fmt(f),
 		}
 
 	}
 }
 impl From<sqlx::Error> for MediaError {
 	fn from(value: sqlx::Error) -> Self {
-		Self::SqlxError(value)
+		Self::Sqlx(value)
 	}
 }
 impl From<base64::DecodeError> for MediaError {
 	fn from(value: base64::DecodeError) -> Self {
-		Self::Base64Error(value)
+		Self::Base64(value)
 	}
 }
 impl From<std::io::Error> for MediaError {
 	fn from(value: std::io::Error) -> Self {
-		Self::IOError(value)
+		Self::IO(value)
 	}
 }
 
