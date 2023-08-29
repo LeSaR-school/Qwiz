@@ -24,18 +24,12 @@ r#"
 GET /vote/<qwiz_id> - get list of voter ids by qwiz id
 
 PUT /vote/<qwiz_id> - vote for a qwiz
+voter_id: i32 - required
 voter_password: String - required
-vote: {
-	voter_id: i32 - required,
-	qwiz_id: i32 - required
-} - required
 
 DELETE /vote/<qwiz_id> - delete vote
+voter_id: i32 - required
 voter_password: String - required
-vote: {
-	voter_id: i32 - required,
-	qwiz_id: i32 - required
-} - required
 "#
 }
 
@@ -67,6 +61,7 @@ async fn get_votes(qwiz_id: i32) -> Result<Json<GetVoteData>, Status> {
 
 		},
 		Err(QwizNotFound) => Err(Status::NotFound),
+		Err(SelfVote) => Err(Status::InternalServerError),
 	}
 
 }
@@ -75,8 +70,8 @@ async fn get_votes(qwiz_id: i32) -> Result<Json<GetVoteData>, Status> {
 
 #[derive(Deserialize)]
 struct PutVoteData {
+	voter_id: i32,
 	voter_password: String,
-	vote: VoteData,
 }
 
 #[put("/vote/<qwiz_id>", data = "<vote_data>")]
@@ -84,7 +79,7 @@ async fn add_vote(qwiz_id: i32, vote_data: Json<PutVoteData>) -> Status {
 
 	use VoteError::*;
 
-	let mut account = match Account::get_by_id(&vote_data.vote.voter_id).await {
+	let mut account = match Account::get_by_id(&vote_data.voter_id).await {
 		Ok(acc) => acc,
 		Err(e) => {
 
@@ -96,10 +91,10 @@ async fn add_vote(qwiz_id: i32, vote_data: Json<PutVoteData>) -> Status {
 
 	match account.verify_password(&vote_data.voter_password).await {
 		Ok(true) => {
-			match Vote::exists(&vote_data.vote.voter_id, &qwiz_id).await {
+			match Vote::exists(&vote_data.voter_id, &qwiz_id).await {
 				Ok(true) => Status::NoContent,
 				Ok(false) => {
-					match Vote::from_vote_data(&vote_data.vote).await {
+					match Vote::from_vote_data(VoteData { voter_id: vote_data.voter_id, qwiz_id }).await {
 						Ok(_) => Status::Ok,
 						Err(Sqlx(e)) => {
 
@@ -108,6 +103,7 @@ async fn add_vote(qwiz_id: i32, vote_data: Json<PutVoteData>) -> Status {
 
 						},
 						Err(QwizNotFound) => Status::NotFound,
+						Err(SelfVote) => Status::Forbidden,
 					}
 				},
 				Err(Sqlx(e)) => {
@@ -117,6 +113,7 @@ async fn add_vote(qwiz_id: i32, vote_data: Json<PutVoteData>) -> Status {
 
 				},
 				Err(QwizNotFound) => Status::NotFound,
+				Err(SelfVote) => Status::InternalServerError,
 			}
 		},
 		Ok(false) => Status::Unauthorized,
@@ -134,8 +131,8 @@ async fn add_vote(qwiz_id: i32, vote_data: Json<PutVoteData>) -> Status {
 
 #[derive(Deserialize)]
 struct DeleteVoteData {
+	voter_id: i32,
 	voter_password: String,
-	vote: VoteData,
 }
 
 #[delete("/vote/<qwiz_id>", data = "<delete_vote_data>")]
@@ -143,7 +140,7 @@ async fn delete_vote(qwiz_id: i32, delete_vote_data: Json<DeleteVoteData>) -> St
 
 	use VoteError::*;
 
-	let mut account = match Account::get_by_id(&delete_vote_data.vote.voter_id).await {
+	let mut account = match Account::get_by_id(&delete_vote_data.voter_id).await {
 		Ok(acc) => acc,
 		Err(e) => {
 
@@ -155,7 +152,7 @@ async fn delete_vote(qwiz_id: i32, delete_vote_data: Json<DeleteVoteData>) -> St
 
 	match account.verify_password(&delete_vote_data.voter_password).await {
 		Ok(true) => {
-			match Vote::get_by_voter_id_qwiz_id(&delete_vote_data.vote.voter_id, &qwiz_id).await {
+			match Vote::get_by_voter_id_qwiz_id(&delete_vote_data.voter_id, &qwiz_id).await {
 				Ok(None) => Status::NoContent,
 				Ok(Some(vote)) => {
 					match vote.delete().await {
@@ -175,6 +172,7 @@ async fn delete_vote(qwiz_id: i32, delete_vote_data: Json<DeleteVoteData>) -> St
 
 				},
 				Err(QwizNotFound) => Status::NotFound,
+				Err(SelfVote) => Status::InternalServerError,
 			}
 		},
 		Ok(false) => Status::Unauthorized,

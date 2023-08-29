@@ -1,9 +1,37 @@
 # these are test requests for /api/vote
 
+@account_id = 1
+@account_password = password123
+@qwiz_id = 1
+
 @base_url = http://localhost:8000/api/vote
+
+
 
 ### info
 GET {{base_url}}
 
 
-# TODO
+
+### get all votes
+GET {{base_url}}/{{qwiz_id}}
+
+
+
+### add vote
+PUT {{base_url}}/{{qwiz_id}}
+
+{
+	"voter_id": {{account_id}},
+	"voter_password": "{{account_password}}"
+}
+
+
+
+### delete vote
+DELETE {{base_url}}/{{qwiz_id}}
+
+{
+	"voter_id": {{account_id}},
+	"voter_password": "{{account_password}}"
+}

@@ -14,6 +14,7 @@ pub struct VoteData {
 
 pub enum VoteError {
 	QwizNotFound,
+	SelfVote,
 	Sqlx(sqlx::Error),
 }
 impl From<sqlx::Error> for VoteError {
@@ -81,10 +82,14 @@ impl Vote {
 		
 	}
 
-	pub async fn from_vote_data(data: &VoteData) -> Result<Self, VoteError> {
+	pub async fn from_vote_data(data: VoteData) -> Result<Self, VoteError> {
 
 		match Qwiz::exists(&data.qwiz_id).await {
-			Ok(true) => (),
+			Ok(true) => {
+				if Qwiz::get_by_id(&data.qwiz_id).await?.creator_id == data.voter_id {
+					return Err(VoteError::SelfVote);
+				}
+			},
 			Ok(false) => return Err(VoteError::QwizNotFound),
 			Err(e) => return Err(VoteError::Sqlx(e)),
 		};
