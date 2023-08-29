@@ -103,10 +103,20 @@ async fn get_qwiz_by_id(id: i32) -> Result<Json<GetQwizData>, Status> {
 		Ok(qwiz) => {
 			match GetQwizData::from_qwiz(qwiz).await {
 				Ok(data) => Ok(Json(data)),
-				Err(_) => Err(Status::InternalServerError),
+				Err(e) => {
+
+					eprintln!("{e}");
+					Err(Status::InternalServerError)
+					
+				},
 			}
 		},
-		Err(_) => Err(Status::NotFound),
+		Err(e) => {
+
+			eprintln!("{e}");
+			Err(Status::NotFound)
+			
+		},
 	}
 
 }
@@ -125,7 +135,12 @@ async fn create_qwiz(qwiz_data: Json<PostQwizData>) -> Result<Created<String>, S
 	
 	let mut account = match Account::get_by_id(&qwiz_data.qwiz.creator_id).await {
 		Ok(acc) => acc,
-		Err(_) => return Err(Status::Unauthorized),
+		Err(e) => {
+
+			eprintln!("{e}");
+			return Err(Status::Unauthorized)
+			
+		},
 	};
 
 	match verify_password(&qwiz_data.creator_password, &mut account).await {
@@ -134,7 +149,12 @@ async fn create_qwiz(qwiz_data: Json<PostQwizData>) -> Result<Created<String>, S
 
 				let qwiz = match Qwiz::from_qwiz_data(&qwiz_data.qwiz).await {
 					Ok(qwiz) => qwiz,
-					Err(_) => return Err(Status::BadRequest),
+					Err(e) => {
+
+						eprintln!("{e}");
+						return Err(Status::BadRequest)
+						
+					},
 				};
 
 				if Question::from_question_datas(&qwiz.id, &qwiz_data.questions).await.is_err() {
@@ -152,7 +172,12 @@ async fn create_qwiz(qwiz_data: Json<PostQwizData>) -> Result<Created<String>, S
 				Err(Status::Unauthorized)
 			}
 		},
-		Err(_) => Err(Status::InternalServerError),
+		Err(e) => {
+
+			eprintln!("{e}");
+			Err(Status::InternalServerError)
+			
+		},
 	}
 
 }
@@ -174,7 +199,12 @@ async fn update_qwiz(id: i32, new_qwiz_data: Json<PatchQwizData>) -> Result<Stat
 
 			let mut account = match Account::get_by_id(&qwiz.creator_id).await {
 				Ok(acc) => acc,
-				Err(_) => return Err(Either::Left(Status::InternalServerError)),
+				Err(e) => {
+
+					eprintln!("{e}");
+					return Err(Either::Left(Status::InternalServerError))
+					
+				},
 			};
 
 			match verify_password(&new_qwiz_data.creator_password, &mut account).await {
@@ -199,11 +229,21 @@ async fn update_qwiz(id: i32, new_qwiz_data: Json<PatchQwizData>) -> Result<Stat
 						Err(Either::Left(Status::Unauthorized))
 					}
 				},
-				Err(_) => Err(Either::Left(Status::InternalServerError)),
+				Err(e) => {
+
+					eprintln!("{e}");
+					Err(Either::Left(Status::InternalServerError))
+					
+				},
 			}
 
 		},
-		Err(_) => Err(Either::Left(Status::NotFound)),
+		Err(e) => {
+
+			eprintln!("{e}");
+			Err(Either::Left(Status::NotFound))
+			
+		},
 	}
 
 }
@@ -223,7 +263,12 @@ async fn delete_qwiz(id: i32, delete_qwiz_data: Json<DeleteQwizData>) -> Status 
 			
 			let mut account = match Account::get_by_id(&qwiz.creator_id).await {
 				Ok(acc) => acc,
-				Err(_) => return Status::InternalServerError,
+				Err(e) => {
+
+					eprintln!("{e}");
+					return Status::InternalServerError
+					
+				},
 			};
 
 			match verify_password(&delete_qwiz_data.creator_password, &mut account).await {
@@ -231,17 +276,32 @@ async fn delete_qwiz(id: i32, delete_qwiz_data: Json<DeleteQwizData>) -> Status 
 					if verified {
 						match qwiz.delete().await {
 							Ok(_) => Status::Ok,
-							Err(_) => Status::InternalServerError,
+							Err(e) => {
+
+								eprintln!("{e}");
+								Status::InternalServerError
+								
+							},
 						}
 					} else {
 						Status::Unauthorized
 					}
 				},
-				Err(_) => Status::InternalServerError,
+				Err(e) => {
+
+					eprintln!("{e}");
+					Status::InternalServerError
+					
+				},
 			}
 
 		},
-		Err(_) => Status::NotFound,
+		Err(e) => {
+
+			eprintln!("{e}");
+			Status::NotFound
+			
+		},
 	}
 
 }

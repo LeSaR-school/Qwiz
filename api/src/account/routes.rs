@@ -76,7 +76,12 @@ async fn get_account_by_id(id: i32) -> Result<Json<GetAccountData>, Status> {
 
 	match Account::get_by_id(&id).await {
 		Ok(account) => Ok(Json(GetAccountData::from_account(account))),
-		Err(_) => Err(Status::NotFound),
+		Err(e) => {
+			
+			eprintln!("{e}");
+			Err(Status::NotFound)
+
+		},
 	}
 	
 }
@@ -86,7 +91,12 @@ async fn get_account_by_username(username: String) -> Result<Json<GetAccountData
 
 	match Account::get_by_username(&username).await {
 		Ok(account) => Ok(Json(GetAccountData::from_account(account))),
-		Err(_) => Err(Status::NotFound),
+		Err(e) => {
+			
+			eprintln!("{e}");
+			Err(Status::NotFound)
+
+		},
 	}
 
 }
@@ -106,7 +116,12 @@ async fn create_account(account_data: Json<PostAccountData>) -> Result<Created<S
 
 	match Account::new(&account_data.username, &account_data.password, &account_data.account_type, &account_data.profile_picture_url).await {
 		Ok(account) => Ok(Created::new(format!("{}/account/{}", BASE_URL, account.id.to_string()))),
-		Err(_) => Err(Status::Conflict),
+		Err(e) => {
+			
+			eprintln!("{e}");
+			Err(Status::Conflict)
+
+		},
 	}
 
 }
@@ -154,10 +169,20 @@ async fn update_account(id: i32, new_account_data: Json<PatchAccountData>) -> Re
 						Err(Either::Left(Status::Unauthorized))
 					}
 				},
-				Err(_) => Err(Either::Left(Status::InternalServerError)),
+				Err(e) => {
+
+					eprintln!("{e}");
+					Err(Either::Left(Status::InternalServerError))
+		
+				},
 			}
 		},
-		Err(_) => Err(Either::Left(Status::NotFound)),
+		Err(e) => {
+
+			eprintln!("{e}");
+			Err(Either::Left(Status::NotFound))
+			
+		},
 	}
 
 }
@@ -179,16 +204,31 @@ async fn delete_account(id: i32, delete_account_data: Json<DeleteAccountData>) -
 					if verified {
 						match account.delete().await {
 							Ok(_) => Status::Ok,
-							Err(_) => Status::InternalServerError,
+							Err(e) => {
+
+								eprintln!("{e}");
+								Status::InternalServerError
+								
+							},
 						}
 					} else {
 						Status::Unauthorized
 					}
 				},
-				Err(_) => Status::InternalServerError,
+				Err(e) => {
+
+					eprintln!("{e}");
+					Status::InternalServerError
+					
+				},
 			}
 		},
-		Err(_) => Status::NotFound,
+		Err(e) => {
+
+			eprintln!("{e}");
+			Status::NotFound
+			
+		},
 	}
 
 }

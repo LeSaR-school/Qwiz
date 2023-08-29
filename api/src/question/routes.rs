@@ -100,10 +100,20 @@ async fn get_question_by_uuid_index(qwiz_id: i32, index: i32) -> Result<Json<Get
 		Ok(question) => {
 			match GetQuestionData::from_question(question).await {
 				Ok(data) => Ok(Json(data)),
-				Err(_) => Err(Status::InternalServerError),
+				Err(e) => {
+
+					eprintln!("{e}");
+					Err(Status::InternalServerError)
+					
+				},
 			}
 		},
-		Err(_) => Err(Status::NotFound),
+		Err(e) => {
+
+			eprintln!("{e}");
+			Err(Status::NotFound)
+			
+		},
 	}
 
 }
@@ -121,12 +131,22 @@ async fn create_question(qwiz_id: i32, question_data: Json<PostQuestionData>) ->
 	
 	let qwiz = match Qwiz::get_by_id(&qwiz_id).await {
 		Ok(qwiz) => qwiz,
-		Err(_) => return Err(Status::NotFound),
+		Err(e) => {
+
+			eprintln!("{e}");
+			return Err(Status::NotFound)
+			
+		},
 	};
 
 	let mut account = match Account::get_by_id(&qwiz.creator_id).await {
 		Ok(acc) => acc,
-		Err(_) => return Err(Status::InternalServerError),
+		Err(e) => {
+
+			eprintln!("{e}");
+			return Err(Status::InternalServerError)
+			
+		},
 	};
 
 	match verify_password(&question_data.creator_password, &mut account).await {
@@ -134,13 +154,23 @@ async fn create_question(qwiz_id: i32, question_data: Json<PostQuestionData>) ->
 			if verified {
 				match Question::from_question_data(&qwiz_id, &question_data.question).await {
 					Ok(question) => Ok(Created::new(format!("{}/question/{}/{}", BASE_URL, qwiz_id, question.index))),
-					Err(_) => Err(Status::BadRequest),
+					Err(e) => {
+
+						eprintln!("{e}");
+						Err(Status::BadRequest)
+						
+					},
 				}
 			} else {
 				Err(Status::Unauthorized)
 			}
 		},
-		Err(_) => Err(Status::InternalServerError),
+		Err(e) => {
+
+			eprintln!("{e}");
+			Err(Status::InternalServerError)
+			
+		},
 	}
 
 }
@@ -170,12 +200,22 @@ async fn update_question(qwiz_id: i32, index: i32, new_question_data: Json<Patch
 
 			let qwiz = match Qwiz::get_by_id(&qwiz_id).await {
 				Ok(qwiz) => qwiz,
-				Err(_) => return Err(Either::Left(Status::NotFound)),
+				Err(e) => {
+
+					eprintln!("{e}");
+					return Err(Either::Left(Status::NotFound))
+					
+				},
 			};
 		
 			let mut account = match Account::get_by_id(&qwiz.creator_id).await {
 				Ok(acc) => acc,
-				Err(_) => return Err(Either::Left(Status::InternalServerError)),
+				Err(e) => {
+
+					eprintln!("{e}");
+					return Err(Either::Left(Status::InternalServerError))
+					
+				},
 			};
 
 			match verify_password(&new_question_data.creator_password, &mut account).await {
@@ -220,11 +260,21 @@ async fn update_question(qwiz_id: i32, index: i32, new_question_data: Json<Patch
 						Err(Either::Left(Status::Unauthorized))
 					}
 				},
-				Err(_) => Err(Either::Left(Status::InternalServerError)),
+				Err(e) => {
+
+					eprintln!("{e}");
+					Err(Either::Left(Status::InternalServerError))
+					
+				},
 			}
 
 		},
-		Err(_) => Err(Either::Left(Status::NotFound)),
+		Err(e) => {
+
+			eprintln!("{e}");
+			Err(Either::Left(Status::NotFound))
+			
+		},
 	}
 
 }
@@ -244,12 +294,22 @@ async fn delete_question(qwiz_id: i32, index: i32, delete_question_data: Json<De
 			
 			let qwiz = match Qwiz::get_by_id(&qwiz_id).await {
 				Ok(qwiz) => qwiz,
-				Err(_) => return Status::NotFound,
+				Err(e) => {
+
+					eprintln!("{e}");
+					return Status::NotFound
+					
+				},
 			};
 		
 			let mut account = match Account::get_by_id(&qwiz.creator_id).await {
 				Ok(acc) => acc,
-				Err(_) => return Status::InternalServerError,
+				Err(e) => {
+
+					eprintln!("{e}");
+					return Status::InternalServerError
+
+				},
 			};
 
 			match verify_password(&delete_question_data.creator_password, &mut account).await {
@@ -257,17 +317,32 @@ async fn delete_question(qwiz_id: i32, index: i32, delete_question_data: Json<De
 					if verified {
 						match question.delete().await {
 							Ok(_) => Status::Ok,
-							Err(_) => Status::InternalServerError,
+							Err(e) => {
+
+								eprintln!("{e}");
+								Status::InternalServerError
+								
+							},
 						}
 					} else {
 						Status::Unauthorized
 					}
 				},
-				Err(_) => Status::InternalServerError,
+				Err(e) => {
+
+					eprintln!("{e}");
+					Status::InternalServerError
+					
+				},
 			}
 
 		},
-		Err(_) => Status::NotFound,
+		Err(e) => {
+
+			eprintln!("{e}");
+			Status::NotFound
+			
+		},
 	}
 
 }
