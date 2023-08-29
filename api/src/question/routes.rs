@@ -18,7 +18,7 @@ pub fn all() -> Vec<Route> {
 
 	routes![
 		question_info,
-		get_question_by_uuid_index,
+		get_question_by_qwiz_id_index,
 		create_question,
 		update_question,
 		delete_question,
@@ -100,7 +100,7 @@ impl GetQuestionData {
 }
 
 #[get("/question/<qwiz_id>/<index>")]
-async fn get_question_by_uuid_index(qwiz_id: i32, index: i32) -> Result<Json<GetQuestionData>, Status> {
+async fn get_question_by_qwiz_id_index(qwiz_id: i32, index: i32) -> Result<Json<GetQuestionData>, Status> {
 
 	match Question::get_by_qwiz_id_index(&qwiz_id, &index).await {
 		Ok(question) => Ok(Json(GetQuestionData::from_question(question).await)),
@@ -146,22 +146,24 @@ async fn create_question(qwiz_id: i32, question_data: Json<PostQuestionData>) ->
 	};
 
 	match account.verify_password(&question_data.creator_password).await {
-		Ok(true) => {
-			match Question::from_question_data(&qwiz_id, &question_data.question).await {
-				Ok(question) => Ok(Created::new(format!("{BASE_URL}/question/{qwiz_id}/{}", question.index))),
-				Err(e) => {
-
-					eprintln!("{e}");
-					Err(Status::BadRequest)
-					
-				},
-			}
-		},
-		Ok(false) => Err(Status::Unauthorized),
+		Ok(true) => (),
+		Ok(false) => return Err(Status::Unauthorized),
 		Err(e) => {
 
 			eprintln!("{e}");
-			Err(Status::InternalServerError)
+			return Err(Status::InternalServerError)
+			
+		},
+	}
+
+
+
+	match Question::from_question_data(&qwiz_id, &question_data.question).await {
+		Ok(question) => Ok(Created::new(format!("{BASE_URL}/question/{qwiz_id}/{}", question.index))),
+		Err(e) => {
+
+			eprintln!("{e}");
+			Err(Status::BadRequest)
 			
 		},
 	}
@@ -219,66 +221,66 @@ async fn update_question(qwiz_id: i32, index: i32, new_question_data: Json<Patch
 	};
 
 	match account.verify_password(&new_question_data.creator_password).await {
-		Ok(true) => {
-
-			if let Some(new_index) = &new_question_data.new_index {
-				if question.update_index(new_index).await.is_err() {
-					return Err(Right(BadRequest(Some("Bad index"))));
-				}
-			}
-
-			if let Some(new_body) = &new_question_data.new_body {
-				if question.update_body(new_body).await.is_err() {
-					return Err(Right(BadRequest(Some("Bad body"))));
-				}
-			}
-
-			if let Some(new_answers) = &new_question_data.new_answers {
-				for new_answer in new_answers {
-					if question.update_answer(&new_answer.index, &new_answer.content).await.is_err() {
-						return Err(Right(BadRequest(Some("Bad answer"))));
-					}
-				}
-			}
-
-			if let Some(new_correct) = &new_question_data.new_correct {
-				if question.update_correct(new_correct).await.is_err() {
-					return Err(Right(BadRequest(Some("Bad correct"))));
-				}
-			}
-
-			if let Some(new_embed) = &new_question_data.new_embed {
-				use QuestionError::*;
-
-				match question.update_embed(new_embed).await {
-					Ok(_) => (),
-					Err(Sqlx(e)) => {
-						
-						eprintln!("{e}");
-						return Err(Left(Status::InternalServerError))
-
-					},
-					Err(Base64(_)) => return Err(Right(BadRequest(Some("Bad embed base64")))),
-					Err(IO(e)) => {
-						
-						eprintln!("{e}");
-						return Err(Left(Status::InternalServerError))
-
-					},
-				}
-			}
-
-			Ok(Status::Ok)
-
-		}
-		Ok(false) => Err(Left(Status::Unauthorized)),
+		Ok(true) => (),
+		Ok(false) => return Err(Left(Status::Unauthorized)),
 		Err(e) => {
 
 			eprintln!("{e}");
-			Err(Left(Status::InternalServerError))
+			return Err(Left(Status::InternalServerError))
 			
 		},
 	}
+	
+
+
+	if let Some(new_index) = &new_question_data.new_index {
+		if question.update_index(new_index).await.is_err() {
+			return Err(Right(BadRequest(Some("Bad index"))));
+		}
+	}
+
+	if let Some(new_body) = &new_question_data.new_body {
+		if question.update_body(new_body).await.is_err() {
+			return Err(Right(BadRequest(Some("Bad body"))));
+		}
+	}
+
+	if let Some(new_answers) = &new_question_data.new_answers {
+		for new_answer in new_answers {
+			if question.update_answer(&new_answer.index, &new_answer.content).await.is_err() {
+				return Err(Right(BadRequest(Some("Bad answer"))));
+			}
+		}
+	}
+
+	if let Some(new_correct) = &new_question_data.new_correct {
+		if question.update_correct(new_correct).await.is_err() {
+			return Err(Right(BadRequest(Some("Bad correct"))));
+		}
+	}
+
+	if let Some(new_embed) = &new_question_data.new_embed {
+		use QuestionError::*;
+
+		match question.update_embed(new_embed).await {
+			Ok(_) => (),
+			Err(Sqlx(e)) => {
+				
+				eprintln!("{e}");
+				return Err(Left(Status::InternalServerError))
+
+			},
+			Err(Base64(_)) => return Err(Right(BadRequest(Some("Bad embed base64")))),
+			Err(IO(e)) => {
+				
+				eprintln!("{e}");
+				return Err(Left(Status::InternalServerError))
+
+			},
+		}
+	}
+
+	Ok(Status::Ok)
 
 }
 
@@ -323,18 +325,20 @@ async fn delete_question(qwiz_id: i32, index: i32, delete_question_data: Json<De
 	};
 
 	match account.verify_password(&delete_question_data.creator_password).await {
-		Ok(true) => {
-			match question.delete().await {
-				Ok(_) => Status::Ok,
-				Err(e) => {
+		Ok(true) => (),
+		Ok(false) => return Status::Unauthorized,
+		Err(e) => {
 
-					eprintln!("{e}");
-					Status::InternalServerError
-					
-				},
-			}
+			eprintln!("{e}");
+			return Status::InternalServerError
+			
 		},
-		Ok(false) => Status::Unauthorized,
+	}
+
+
+
+	match question.delete().await {
+		Ok(_) => Status::Ok,
 		Err(e) => {
 
 			eprintln!("{e}");

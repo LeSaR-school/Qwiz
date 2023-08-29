@@ -7,7 +7,7 @@ use serde::Deserialize;
 
 
 #[derive(Deserialize)]
-pub struct VoteData {
+pub struct NewVoteData {
 	pub voter_id: i32,
 	pub qwiz_id: i32,
 }
@@ -82,7 +82,7 @@ impl Vote {
 		
 	}
 
-	pub async fn from_vote_data(data: VoteData) -> Result<Self, VoteError> {
+	pub async fn from_vote_data(data: NewVoteData) -> Result<Self, VoteError> {
 
 		match Qwiz::exists(&data.qwiz_id).await {
 			Ok(true) => {

@@ -152,37 +152,38 @@ async fn create_qwiz(qwiz_data: Json<PostQwizData>) -> Result<Created<String>, S
 	};
 
 	match account.verify_password(&qwiz_data.creator_password).await {
-		Ok(true) => {
-			let qwiz = match Qwiz::from_qwiz_data(&qwiz_data.qwiz).await {
-				Ok(qwiz) => qwiz,
-				Err(e) => {
-
-					eprintln!("{e}");
-					return Err(Status::BadRequest)
-					
-				},
-			};
-
-			if Question::from_question_datas(&qwiz.id, &qwiz_data.questions).await.is_err() {
-
-				if qwiz.delete().await.is_err() {
-					return Err(Status::InternalServerError);
-				}
-				return Err(Status::BadRequest);
-
-			}
-
-			Ok(Created::new(format!("{BASE_URL}/qwiz/{}", qwiz.id)))
-
-		},
-		Ok(false) => Err(Status::Unauthorized),
+		Ok(true) => (),
+		Ok(false) => return Err(Status::Unauthorized),
 		Err(e) => {
 
 			eprintln!("{e}");
-			Err(Status::InternalServerError)
+			return Err(Status::InternalServerError)
 			
 		},
 	}
+
+
+
+	let qwiz = match Qwiz::from_qwiz_data(&qwiz_data.qwiz).await {
+		Ok(qwiz) => qwiz,
+		Err(e) => {
+
+			eprintln!("{e}");
+			return Err(Status::BadRequest)
+			
+		},
+	};
+
+	if Question::from_question_datas(&qwiz.id, &qwiz_data.questions).await.is_err() {
+
+		if qwiz.delete().await.is_err() {
+			return Err(Status::InternalServerError);
+		}
+		return Err(Status::BadRequest);
+
+	}
+
+	Ok(Created::new(format!("{BASE_URL}/qwiz/{}", qwiz.id)))
 
 }
 
@@ -219,46 +220,46 @@ async fn update_qwiz(id: i32, new_qwiz_data: Json<PatchQwizData>) -> Result<Stat
 	};
 
 	match account.verify_password(&new_qwiz_data.creator_password).await {
-		Ok(true) => {
-
-			if let Some(new_name) = &new_qwiz_data.new_name {
-				if qwiz.update_name(new_name).await.is_err() {
-					return Err(Right(BadRequest(Some("Bad name"))));
-				}
-			}
-
-			if let Some(new_thumbnail) = &new_qwiz_data.new_thumbnail {
-				use QwizError::*;
-
-				match qwiz.update_thumbnail(new_thumbnail).await {
-					Ok(_) => (),
-					Err(Sqlx(e)) => {
-						
-						eprintln!("{e}");
-						return Err(Left(Status::InternalServerError))
-
-					},
-					Err(Base64(_)) => return Err(Right(BadRequest(Some("Bad thumbnail base64")))),
-					Err(IO(e)) => {
-						
-						eprintln!("{e}");
-						return Err(Left(Status::InternalServerError))
-
-					},
-				}
-			}
-
-			Ok(Status::Ok)
-
-		},
-		Ok(false) => Err(Left(Status::Unauthorized)),
+		Ok(true) => (),
+		Ok(false) => return Err(Left(Status::Unauthorized)),
 		Err(e) => {
 
 			eprintln!("{e}");
-			Err(Left(Status::InternalServerError))
+			return Err(Left(Status::InternalServerError))
 			
 		},
 	}
+
+
+
+	if let Some(new_name) = &new_qwiz_data.new_name {
+		if qwiz.update_name(new_name).await.is_err() {
+			return Err(Right(BadRequest(Some("Bad name"))));
+		}
+	}
+
+	if let Some(new_thumbnail) = &new_qwiz_data.new_thumbnail {
+		use QwizError::*;
+
+		match qwiz.update_thumbnail(new_thumbnail).await {
+			Ok(_) => (),
+			Err(Sqlx(e)) => {
+				
+				eprintln!("{e}");
+				return Err(Left(Status::InternalServerError))
+
+			},
+			Err(Base64(_)) => return Err(Right(BadRequest(Some("Bad thumbnail base64")))),
+			Err(IO(e)) => {
+				
+				eprintln!("{e}");
+				return Err(Left(Status::InternalServerError))
+
+			},
+		}
+	}
+
+	Ok(Status::Ok)
 
 }
 
@@ -272,45 +273,45 @@ struct DeleteQwizData {
 #[delete("/qwiz/<id>", data = "<delete_qwiz_data>")]
 async fn delete_qwiz(id: i32, delete_qwiz_data: Json<DeleteQwizData>) -> Status {
 
-	match Qwiz::get_by_id(&id).await {
-		Ok(qwiz) => {
-			
-			let mut account = match Account::get_by_id(&qwiz.creator_id).await {
-				Ok(acc) => acc,
-				Err(e) => {
-
-					eprintln!("{e}");
-					return Status::InternalServerError
-					
-				},
-			};
-
-			match account.verify_password(&delete_qwiz_data.creator_password).await {
-				Ok(true) => {
-					match qwiz.delete().await {
-						Ok(_) => Status::Ok,
-						Err(e) => {
-
-							eprintln!("{e}");
-							Status::InternalServerError
-							
-						},
-					}
-				},
-				Ok(false) => Status::Unauthorized,
-				Err(e) => {
-
-					eprintln!("{e}");
-					Status::InternalServerError
-					
-				},
-			}
-
-		},
+	let qwiz = match Qwiz::get_by_id(&id).await {
+		Ok(qwiz) => qwiz,
 		Err(e) => {
 
 			eprintln!("{e}");
-			Status::NotFound
+			return Status::NotFound
+			
+		},
+	};
+
+	let mut account = match Account::get_by_id(&qwiz.creator_id).await {
+		Ok(acc) => acc,
+		Err(e) => {
+
+			eprintln!("{e}");
+			return Status::InternalServerError
+			
+		},
+	};
+
+	match account.verify_password(&delete_qwiz_data.creator_password).await {
+		Ok(true) => (),
+		Ok(false) => return Status::Unauthorized,
+		Err(e) => {
+
+			eprintln!("{e}");
+			return Status::InternalServerError
+			
+		},
+	}
+
+
+
+	match qwiz.delete().await {
+		Ok(_) => Status::Ok,
+		Err(e) => {
+
+			eprintln!("{e}");
+			Status::InternalServerError
 			
 		},
 	}
