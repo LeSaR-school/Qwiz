@@ -1,0 +1,106 @@
+# these are test requests for /api/account
+
+@base_url = http://localhost:8000/api/account
+
+@username = test acc
+@password = password123
+@new_password = securepassword!@#
+
+@account_type = Student
+@new_account_type = Parent
+
+# fill in after first post
+@uuid = ebe5b0a4-903f-4f78-bc57-7c5361c38315
+
+
+
+### create
+POST {{base_url}}
+Content-Type: application/json
+
+{
+	"username": "{{username}}",
+	"password": "{{password}}",
+	"account_type": "{{account_type}}"
+}
+
+
+
+### get by id
+GET {{base_url}}/{{uuid}}
+
+### get by username
+GET {{base_url}}/{{username}}
+
+
+
+### invalid patch - id
+PATCH {{base_url}}/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+	"password": "1",
+	"new_password": "2"
+}
+
+### invalid patch - password
+PATCH {{base_url}}/{{uuid}}
+Content-Type: application/json
+
+{
+	"password": "1",
+	"new_password": "2"
+}
+
+### invalid account type patch
+PATCH {{base_url}}/{{uuid}}
+Content-Type: application/json
+
+{
+	"password": "{{password}}",
+	"new_account_type": "lol"
+}
+
+### valid account type patch
+PATCH {{base_url}}/{{uuid}}
+Content-Type: application/json
+
+{
+	"password": "{{password}}",
+	"new_account_type": "{{new_account_type}}"
+}
+
+### valid password patch
+PATCH {{base_url}}/{{uuid}}
+Content-Type: application/json
+
+{
+	"password": "{{password}}",
+	"new_password": "{{new_password}}"
+}
+
+
+
+### invalid delete - id
+DELETE {{base_url}}/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+	"password": "1"
+}
+
+### invalid delete - password
+DELETE {{base_url}}/{{uuid}}
+Content-Type: application/json
+
+{
+	"password": "1"
+}
+
+### valid delete
+DELETE {{base_url}}/{{uuid}}
+Content-Type: application/json
+
+{
+	"password": "{{new_password}}"
+}
