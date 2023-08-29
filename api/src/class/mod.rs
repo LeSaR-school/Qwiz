@@ -1,3 +1,5 @@
+pub mod routes;
+
 use crate::POOL;
 use crate::account::{Account, AccountType};
 

@@ -47,6 +47,7 @@ fn rocket() -> _ {
 	routes.append(&mut qwiz::routes::all());
 	routes.append(&mut question::routes::all());
 	routes.append(&mut vote::routes::all());
+	routes.append(&mut class::routes::all());
 	routes.append(&mut media::routes::all());
 
 	rocket::build()
