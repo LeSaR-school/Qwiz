@@ -174,6 +174,26 @@ impl Class {
 
 	}
 	
+	pub async fn add_students(&self, new_student_ids: Vec<i32>) -> Result<(), StudentError> {
+
+		for id in new_student_ids.iter() {
+			if Account::get_by_id(&id).await?.account_type != AccountType::Student {
+				return Err(StudentError::NotAStudent)
+			}
+		}
+
+		sqlx::query!(
+			"INSERT INTO student (student_id, class_id) VALUES (UNNEST($1::INTEGER[]), $2)",
+			&new_student_ids,
+			&self.id,
+		)
+		.execute(POOL.get().await)
+		.await?;
+
+		Ok(())
+
+	}
+
 	pub async fn remove_student(&self, student_id: &i32) -> Result<(), StudentError> {
 
 		if !Account::exists(student_id).await? {
@@ -187,6 +207,20 @@ impl Class {
 		sqlx::query!(
 			"DELETE FROM student WHERE student_id=$1 AND class_id=$2",
 			student_id,
+			&self.id,
+		)
+		.execute(POOL.get().await)
+		.await?;
+
+		Ok(())
+
+	}
+
+	pub async fn remove_students(&self, student_ids: Vec<i32>) -> sqlx::Result<()> {
+
+		sqlx::query!(
+			"DELETE FROM student WHERE student_id=ANY($1) AND class_id=$2",
+			&student_ids,
 			&self.id,
 		)
 		.execute(POOL.get().await)
