@@ -63,7 +63,8 @@ impl Account {
 
 		sqlx::query_as!(
 			Account,
-			r#"INSERT INTO account (username, password_hash, account_type, profile_picture_uuid) VALUES ($1, $2, $3, $4) RETURNING uuid, username, password_hash, profile_picture_uuid, account_type AS "account_type!: AccountType""#,
+			r#"INSERT INTO account (username, password_hash, account_type, profile_picture_uuid)
+			VALUES ($1, $2, $3, $4) RETURNING uuid, username, password_hash, profile_picture_uuid, account_type AS "account_type!: AccountType""#,
 			username,
 			password_hash,
 			account_type as &AccountType,
@@ -74,7 +75,7 @@ impl Account {
 	
 	}
 
-	pub async fn delete(self) -> Result<PgQueryResult, sqlx::Error> {
+	pub async fn delete(self) -> Result<(), sqlx::Error> {
 		
 		if let Some(uuid) = self.profile_picture_uuid {
 			media::delete(uuid).await?;
@@ -82,10 +83,30 @@ impl Account {
 
 		sqlx::query!(
 			"DELETE FROM account WHERE uuid=$1",
-			self.uuid
+			self.uuid,
 		)
 		.execute(POOL.get().await)
-		.await
+		.await?;
+
+		sqlx::query!(
+			r#"WITH deleted_qwiz AS (
+				DELETE FROM qwiz WHERE creator_uuid=$1
+				RETURNING uuid, thumbnail_uuid
+			),
+			deleted_question AS (
+				DELETE FROM question WHERE qwiz_uuid IN (SELECT uuid FROM deleted_qwiz)
+				RETURNING embed_uuid
+			)
+			DELETE FROM media WHERE uuid IN (
+				SELECT thumbnail_uuid FROM deleted_qwiz UNION
+				SELECT embed_uuid FROM deleted_question
+			)"#,
+			self.uuid,
+		)
+		.execute(POOL.get().await)
+		.await?;
+
+		Ok(())
 
 	}
 

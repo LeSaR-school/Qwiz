@@ -1,6 +1,7 @@
-use crate::account::*;
+use crate::account::{Account, AccountType};
 use crate::crypto::*;
-use rocket::Route;
+use rocket::response::status::BadRequest;
+use rocket::{Route, Either};
 use rocket::{http::Status, serde::json::Json};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -101,11 +102,11 @@ struct PostAccountData {
 }
 
 #[post("/account", data = "<account_data>")]
-async fn new_account(account_data: Json<PostAccountData>) -> Result<String, Status> {
+async fn new_account(account_data: Json<PostAccountData>) -> Status {
 
 	match Account::new(&account_data.username, &account_data.password, &account_data.account_type, &account_data.profile_picture_url).await {
-		Ok(account) => Ok(account.uuid.to_string()),
-		Err(_) => Err(Status::Conflict),
+		Ok(_) => Status::Created,
+		Err(_) => Status::Conflict,
 	}
 
 }
@@ -121,7 +122,7 @@ struct PatchAccountData {
 }
 
 #[patch("/account/<id>", data = "<new_account_data>")]
-async fn update_account(id: Uuid, new_account_data: Json<PatchAccountData>) -> Status {
+async fn update_account(id: Uuid, new_account_data: Json<PatchAccountData>) -> Result<Status, Either<Status, BadRequest<&'static str>>> {
 
 	match Account::get_by_id(&id).await {
 		Ok(mut account) => {
@@ -131,32 +132,32 @@ async fn update_account(id: Uuid, new_account_data: Json<PatchAccountData>) -> S
 
 						if let Some(new_account_type) = &new_account_data.new_account_type {
 							if account.update_account_type(new_account_type).await.is_err() {
-								return Status::BadRequest;
+								return Err(Either::Right(BadRequest(Some("Bad account type"))));
 							}
 						}
 
 						if let Some(new_password) = &new_account_data.new_password {
 							if account.update_password(new_password).await.is_err() {
-								return Status::BadRequest;
+								return Err(Either::Right(BadRequest(Some("Bad password"))));
 							}
 						}
 
 						if let Some(new_profile_picture_url) = &new_account_data.new_profile_picture_url {
 							if account.update_profile_picture_url(new_profile_picture_url).await.is_err() {
-								return Status::BadRequest;
+								return Err(Either::Right(BadRequest(Some("Bad profile picture url"))));
 							}
 						}
 
-						Status::Ok
+						Ok(Status::Ok)
 
 					} else {
-						Status::Unauthorized
+						Err(Either::Left(Status::Unauthorized))
 					}
 				},
-				Err(_) => Status::InternalServerError,
+				Err(_) => Err(Either::Left(Status::InternalServerError)),
 			}
 		},
-		Err(_) => Status::NotFound,
+		Err(_) => Err(Either::Left(Status::NotFound)),
 	}
 
 }

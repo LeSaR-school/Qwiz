@@ -1,5 +1,6 @@
 mod account;
 mod qwiz;
+mod question;
 mod media;
 mod crypto;
 
@@ -42,6 +43,7 @@ fn rocket() -> _ {
 	let mut routes = routes![root_info];
 	routes.append(&mut account::routes::all());
 	routes.append(&mut qwiz::routes::all());
+	routes.append(&mut question::routes::all());
 	routes.append(&mut media::routes::all());
 
 	rocket::build()

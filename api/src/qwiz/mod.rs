@@ -9,13 +9,13 @@ use sqlx::{types::Uuid, postgres::PgQueryResult};
 pub struct Qwiz {
 	uuid: Uuid,
 	name: String,
-	creator_uuid: Uuid,
+	pub creator_uuid: Uuid,
 	thumbnail_uuid: Option<Uuid>,
 }
 
 impl Qwiz {
 
-	pub async fn get_by_id(uuid: &Uuid) -> Result<Self, sqlx::Error> {
+	pub async fn get_by_uuid(uuid: &Uuid) -> Result<Self, sqlx::Error> {
 
 		sqlx::query_as!(
 			Qwiz,
@@ -54,7 +54,7 @@ impl Qwiz {
 
 	}
 	
-	pub async fn delete(self) -> Result<PgQueryResult, sqlx::Error> {
+	pub async fn delete(self) -> Result<(), sqlx::Error> {
 
 		if let Some(uuid) = self.thumbnail_uuid {
 			media::delete(uuid).await?;
@@ -62,10 +62,23 @@ impl Qwiz {
 
 		sqlx::query!(
 			"DELETE FROM qwiz WHERE uuid=$1",
-			self.uuid
+			self.uuid,
 		)
 		.execute(POOL.get().await)
-		.await
+		.await?;
+
+		sqlx::query!(
+			r#"WITH deleted_uuids AS (
+				DELETE FROM question WHERE qwiz_uuid=$1
+				RETURNING embed_uuid
+			)
+			DELETE FROM media WHERE uuid IN (SELECT embed_uuid FROM deleted_uuids)"#,
+			self.uuid,
+		)
+		.execute(POOL.get().await)
+		.await?;
+
+		Ok(())
 
 	}
 

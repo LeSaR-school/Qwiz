@@ -1,7 +1,11 @@
 use crate::account::Account;
-use crate::qwiz::*;
-use crate::crypto::*;
-use rocket::Route;
+use crate::question::routes::PostQuestionData;
+use crate::qwiz::Qwiz;
+use crate::question::Question;
+use crate::crypto::verify_password;
+
+use rocket::response::status::{BadRequest, Created};
+use rocket::{Route, Either};
 use rocket::{http::Status, serde::json::Json};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -51,25 +55,34 @@ struct GetQwizData {
 	name: String,
 	creator_uuid: Uuid,
 	thumbnail_uuid: Option<Uuid>,
+	questions: Vec<Question>,
 }
 impl GetQwizData {
 
-	fn from_qwiz(qwiz: Qwiz) -> Self {
-		Self {
-			uuid: qwiz.uuid,
-			name: qwiz.name,
-			creator_uuid: qwiz.creator_uuid,
-			thumbnail_uuid: qwiz.thumbnail_uuid
-		}
+	async fn from_qwiz(qwiz: Qwiz) -> Result<Self, sqlx::Error> {
+		Ok(
+			Self {
+				uuid: qwiz.uuid,
+				name: qwiz.name,
+				creator_uuid: qwiz.creator_uuid,
+				thumbnail_uuid: qwiz.thumbnail_uuid,
+				questions: Question::get_all_by_qwiz_uuid(&qwiz.uuid).await?,
+			}
+		)
 	}
 
 }
 
-#[get("/qwiz/<id>", rank = 1)]
-async fn get_qwiz_by_id(id: Uuid) -> Result<Json<GetQwizData>, Status> {
+#[get("/qwiz/<uuid>", rank = 1)]
+async fn get_qwiz_by_id(uuid: Uuid) -> Result<Json<GetQwizData>, Status> {
 
-	match Qwiz::get_by_id(&id).await {
-		Ok(qwiz) => Ok(Json(GetQwizData::from_qwiz(qwiz))),
+	match Qwiz::get_by_uuid(&uuid).await {
+		Ok(qwiz) => Ok(Json(
+			match GetQwizData::from_qwiz(qwiz).await {
+				Ok(data) => data,
+				Err(_) => return Err(Status::InternalServerError),
+			}
+		)),
 		Err(_) => Err(Status::NotFound),
 	}
 
@@ -83,10 +96,11 @@ struct PostQwizData {
 	creator_uuid: Uuid,
 	creator_password: String,
 	thumbnail_url: Option<String>,
+	questions: Option<Vec<PostQuestionData>>,
 }
 
 #[post("/qwiz", data = "<qwiz_data>")]
-async fn new_qwiz(qwiz_data: Json<PostQwizData>) -> Result<String, Status> {
+async fn new_qwiz(qwiz_data: Json<PostQwizData>) -> Result<Created<String>, Status> {
 	
 	let mut account = match Account::get_by_id(&qwiz_data.creator_uuid).await {
 		Ok(acc) => acc,
@@ -96,10 +110,22 @@ async fn new_qwiz(qwiz_data: Json<PostQwizData>) -> Result<String, Status> {
 	match verify_password(&qwiz_data.creator_password, &mut account).await {
 		Ok(verified) => {
 			if verified {
-				match Qwiz::new(&qwiz_data.name, &qwiz_data.creator_uuid, &qwiz_data.thumbnail_url).await {
-					Ok(qwiz) => Ok(qwiz.uuid.to_string()),
-					Err(_) => Err(Status::BadRequest),
+
+				let qwiz_uuid = match Qwiz::new(&qwiz_data.name, &qwiz_data.creator_uuid, &qwiz_data.thumbnail_url).await {
+					Ok(qwiz) => qwiz.uuid,
+					Err(_) => return Err(Status::BadRequest),
+				};
+
+				if let Some(questions) = &qwiz_data.questions {
+					for question_data in questions {
+						if Question::from_question_data(&qwiz_uuid, &question_data).await.is_err() {
+							return Err(Status::BadRequest);
+						}
+					}
 				}
+
+				Ok(Created::new(qwiz_uuid.to_string()))
+
 			} else {
 				Err(Status::Unauthorized)
 			}
@@ -118,15 +144,15 @@ struct PatchQwizData {
 	new_thumbnail_url: Option<String>,
 }
 
-#[patch("/qwiz/<id>", data = "<new_qwiz_data>")]
-async fn update_qwiz(id: Uuid, new_qwiz_data: Json<PatchQwizData>) -> Status {
+#[patch("/qwiz/<uuid>", data = "<new_qwiz_data>")]
+async fn update_qwiz(uuid: Uuid, new_qwiz_data: Json<PatchQwizData>) -> Result<Status, Either<Status, BadRequest<&'static str>>> {
 
-	match Qwiz::get_by_id(&id).await {
+	match Qwiz::get_by_uuid(&uuid).await {
 		Ok(mut qwiz) => {
 
 			let mut account = match Account::get_by_id(&qwiz.creator_uuid).await {
 				Ok(acc) => acc,
-				Err(_) => return Status::InternalServerError,
+				Err(_) => return Err(Either::Left(Status::InternalServerError)),
 			};
 
 			match verify_password(&new_qwiz_data.creator_password, &mut account).await {
@@ -135,27 +161,27 @@ async fn update_qwiz(id: Uuid, new_qwiz_data: Json<PatchQwizData>) -> Status {
 
 						if let Some(new_name) = &new_qwiz_data.new_name {
 							if qwiz.update_name(new_name).await.is_err() {
-								return Status::BadRequest;
+								return Err(Either::Right(BadRequest(Some("Bad name"))));
 							}
 						}
 
 						if let Some(new_thumbnail_url) = &new_qwiz_data.new_thumbnail_url {
 							if qwiz.update_thumbnail_url(new_thumbnail_url).await.is_err() {
-								return Status::BadRequest;
+								return Err(Either::Right(BadRequest(Some("Bad thumbnail url"))));
 							}
 						}
 
-						Status::Ok
+						Ok(Status::Ok)
 
 					} else {
-						Status::Unauthorized
+						Err(Either::Left(Status::Unauthorized))
 					}
 				},
-				Err(_) => Status::InternalServerError,
+				Err(_) => Err(Either::Left(Status::InternalServerError)),
 			}
 
 		},
-		Err(_) => Status::NotFound,
+		Err(_) => Err(Either::Left(Status::NotFound)),
 	}
 
 }
@@ -167,10 +193,10 @@ struct DeleteQwizData {
 	creator_password: String,
 }
 
-#[delete("/qwiz/<id>", data = "<delete_qwiz_data>")]
-async fn delete_qwiz(id: Uuid, delete_qwiz_data: Json<DeleteQwizData>) -> Status {
+#[delete("/qwiz/<uuid>", data = "<delete_qwiz_data>")]
+async fn delete_qwiz(uuid: Uuid, delete_qwiz_data: Json<DeleteQwizData>) -> Status {
 
-	match Qwiz::get_by_id(&id).await {
+	match Qwiz::get_by_uuid(&uuid).await {
 		Ok(qwiz) => {
 			
 			let mut account = match Account::get_by_id(&qwiz.creator_uuid).await {
