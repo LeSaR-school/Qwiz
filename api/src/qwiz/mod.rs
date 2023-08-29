@@ -76,7 +76,19 @@ pub struct Qwiz {
 
 impl Qwiz {
 
-	pub async fn get_by_id(id: &i32) -> Result<Self, sqlx::Error> {
+	pub async fn exists(id: &i32) -> sqlx::Result<bool> {
+
+		sqlx::query!(
+			"SELECT EXISTS(SELECT * FROM qwiz WHERE id=$1)",
+			id,
+		)
+		.fetch_one(POOL.get().await)
+		.await
+		.map(|r| r.exists.unwrap_or(false))
+
+	}
+
+	pub async fn get_by_id(id: &i32) -> sqlx::Result<Self> {
 
 		sqlx::query_as!(
 			Qwiz,
@@ -116,7 +128,7 @@ impl Qwiz {
 
 	}
 
-	pub async fn delete(self) -> Result<(), sqlx::Error> {
+	pub async fn delete(self) -> sqlx::Result<()> {
 
 		sqlx::query!(
 			"DELETE FROM qwiz WHERE id=$1",
@@ -129,7 +141,7 @@ impl Qwiz {
 
 	}
 
-	pub async fn update_name(&mut self, new_name: &String) -> Result<(), sqlx::Error> {
+	pub async fn update_name(&mut self, new_name: &String) -> sqlx::Result<()> {
 
 		self.name = sqlx::query!(
 			"UPDATE qwiz SET name=$1 WHERE id=$2 RETURNING name",
@@ -167,5 +179,5 @@ impl Qwiz {
 		Ok(())
 
 	}
-
+	
 }

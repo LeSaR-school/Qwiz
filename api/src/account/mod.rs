@@ -69,7 +69,7 @@ pub struct Account {
 
 impl Account {
 
-	pub async fn get_by_id(id: &i32) -> Result<Self, sqlx::Error> {
+	pub async fn get_by_id(id: &i32) -> sqlx::Result<Self> {
 
 		sqlx::query_as!(
 			Account,
@@ -80,7 +80,7 @@ impl Account {
 		.await
 	
 	}
-	pub async fn get_by_username(username: &String) -> Result<Self, sqlx::Error> {
+	pub async fn get_by_username(username: &String) -> sqlx::Result<Self> {
 
 		sqlx::query_as!(
 			Account,
@@ -115,7 +115,7 @@ impl Account {
 	
 	}
 
-	pub async fn delete(self) -> Result<(), sqlx::Error> {
+	pub async fn delete(self) -> sqlx::Result<()> {
 		
 		sqlx::query!(
 			"DELETE FROM account WHERE id=$1",
@@ -128,7 +128,7 @@ impl Account {
 
 	}
 
-	pub async fn update_password(&mut self, new_password: &String) -> Result<(), sqlx::Error> {
+	pub async fn update_password(&mut self, new_password: &String) -> sqlx::Result<()> {
 
 		let password_hash = crypto::encode_password(new_password);
 
@@ -144,7 +144,7 @@ impl Account {
 		Ok(())
 
 	}
-	pub async fn update_account_type(&mut self, new_account_type: &AccountType) -> Result<(), sqlx::Error> {
+	pub async fn update_account_type(&mut self, new_account_type: &AccountType) -> sqlx::Result<()> {
 
 		self.account_type = sqlx::query!(
 			r#"UPDATE account SET account_type=$1 WHERE id=$2 RETURNING account_type AS "account_type!: AccountType""#,

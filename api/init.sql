@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 14.8 (Ubuntu 14.8-0ubuntu0.22.04.1)
--- Dumped by pg_dump version 14.8 (Ubuntu 14.8-0ubuntu0.22.04.1)
+-- Dumped from database version 15.2
+-- Dumped by pg_dump version 15.2
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -217,6 +217,18 @@ ALTER SEQUENCE public.qwiz_id_seq OWNED BY public.qwiz.id;
 
 
 --
+-- Name: vote; Type: TABLE; Schema: public; Owner: qwiz
+--
+
+CREATE TABLE public.vote (
+    voter_id integer NOT NULL,
+    qwiz_id integer NOT NULL
+);
+
+
+ALTER TABLE public.vote OWNER TO qwiz;
+
+--
 -- Name: account id; Type: DEFAULT; Schema: public; Owner: qwiz
 --
 
@@ -268,6 +280,14 @@ ALTER TABLE ONLY public.question
 
 ALTER TABLE ONLY public.qwiz
     ADD CONSTRAINT qwiz_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: vote vote_pkey; Type: CONSTRAINT; Schema: public; Owner: qwiz
+--
+
+ALTER TABLE ONLY public.vote
+    ADD CONSTRAINT vote_pkey PRIMARY KEY (voter_id, qwiz_id);
 
 
 --
@@ -332,7 +352,23 @@ ALTER TABLE ONLY public.qwiz
 
 
 --
--- Name: SCHEMA public; Type: ACL; Schema: -; Owner: postgres
+-- Name: vote vote_qwiz_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: qwiz
+--
+
+ALTER TABLE ONLY public.vote
+    ADD CONSTRAINT vote_qwiz_id_fkey FOREIGN KEY (qwiz_id) REFERENCES public.qwiz(id) ON DELETE CASCADE;
+
+
+--
+-- Name: vote vote_voter_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: qwiz
+--
+
+ALTER TABLE ONLY public.vote
+    ADD CONSTRAINT vote_voter_id_fkey FOREIGN KEY (voter_id) REFERENCES public.account(id) ON DELETE CASCADE;
+
+
+--
+-- Name: SCHEMA public; Type: ACL; Schema: -; Owner: pg_database_owner
 --
 
 GRANT ALL ON SCHEMA public TO qwiz;

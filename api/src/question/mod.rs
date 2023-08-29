@@ -77,7 +77,7 @@ pub struct Question {
 
 impl Question {
 
-	pub async fn get_by_qwiz_id_index(qwiz_id: &i32, index: &i32) -> Result<Self, sqlx::Error> {
+	pub async fn get_by_qwiz_id_index(qwiz_id: &i32, index: &i32) -> sqlx::Result<Self> {
 
 		sqlx::query_as!(
 			Question,
@@ -89,7 +89,7 @@ impl Question {
 		.await
 	
 	}
-	pub async fn get_all_by_qwiz_id(qwiz_id: &i32) -> Result<Vec<Self>, sqlx::Error> {
+	pub async fn get_all_by_qwiz_id(qwiz_id: &i32) -> sqlx::Result<Vec<Self>> {
 
 		sqlx::query_as!(
 			Question,
@@ -101,7 +101,7 @@ impl Question {
 	
 	}
 
-	pub async fn from_question_data(qwiz_id: &i32, data: &NewQuestionData) -> Result<Self, sqlx::Error> {
+	pub async fn from_question_data(qwiz_id: &i32, data: &NewQuestionData) -> sqlx::Result<Self> {
 
 		let embed_uuid = match &data.embed_data {
 			Some(d) => {
@@ -204,7 +204,7 @@ impl Question {
 
 	}
 
-	pub async fn delete(self) -> Result<(), sqlx::Error> {
+	pub async fn delete(self) -> sqlx::Result<()> {
 		
 		sqlx::query!(
 			r#"WITH deleted AS (
@@ -220,7 +220,7 @@ impl Question {
 
 	}
 
-	pub async fn update_index(&mut self, new_index: &i32) -> Result<bool, sqlx::Error> {
+	pub async fn update_index(&mut self, new_index: &i32) -> sqlx::Result<bool> {
 		use Ordering::*;
 
 		match new_index.cmp(&self.index) {
@@ -311,7 +311,7 @@ impl Question {
 		}
 
 	}
-	pub async fn update_body(&mut self, new_body: &String) -> Result<(), sqlx::Error> {
+	pub async fn update_body(&mut self, new_body: &String) -> sqlx::Result<()> {
 
 		self.body = sqlx::query!(
 			"UPDATE question SET body=$1 WHERE qwiz_id=$2 AND index=$3 RETURNING body",
@@ -326,7 +326,7 @@ impl Question {
 		Ok(())
 
 	}
-	pub async fn update_answer(&mut self, answer_number: &u8, new_answer: &Option<String>) -> Result<bool, sqlx::Error> {
+	pub async fn update_answer(&mut self, answer_number: &u8, new_answer: &Option<String>) -> sqlx::Result<bool> {
 
 		match answer_number {
 			1 => {
@@ -387,7 +387,7 @@ impl Question {
 		Ok(true)
 
 	}
-	pub async fn update_correct(&mut self, new_correct: &i16) -> Result<(), sqlx::Error> {
+	pub async fn update_correct(&mut self, new_correct: &i16) -> sqlx::Result<()> {
 
 		self.correct = sqlx::query!(
 			"UPDATE question SET correct=$1 WHERE qwiz_id=$2 AND index=$3 RETURNING correct",

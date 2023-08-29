@@ -1,1 +1,1 @@
-pg_dump --schema-only qwiz -U postgres > init.sql
+pg_dump -d qwiz -U postgres --schema-only -f init.sql

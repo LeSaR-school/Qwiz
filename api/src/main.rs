@@ -1,6 +1,7 @@
 mod account;
 mod qwiz;
 mod question;
+mod vote;
 mod media;
 mod crypto;
 
@@ -44,12 +45,13 @@ fn rocket() -> _ {
 	routes.append(&mut account::routes::all());
 	routes.append(&mut qwiz::routes::all());
 	routes.append(&mut question::routes::all());
+	routes.append(&mut vote::routes::all());
 	routes.append(&mut media::routes::all());
 
 	rocket::build()
 		.register(BASE_URL, catchers![default_catcher])
 		.mount(BASE_URL, routes)
-		.mount(format!("{BASE_URL}/media/upload"), FileServer::from(relative!("/media")))
+		.mount(format!("{BASE_URL}/media/upload"), FileServer::from(relative!("media")))
 
 }
 

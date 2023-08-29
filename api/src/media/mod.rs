@@ -133,7 +133,7 @@ pub struct Media {
 
 impl Media {
 
-	pub async fn get_by_uuid(uuid: &Uuid) -> Result<Self, sqlx::Error> {
+	pub async fn get_by_uuid(uuid: &Uuid) -> sqlx::Result<Self> {
 
 		sqlx::query_as!(
 			Media,

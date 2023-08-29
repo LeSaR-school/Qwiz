@@ -1,0 +1,9 @@
+# these are test requests for /api/vote
+
+@base_url = http://localhost:8000/api/vote
+
+### info
+GET {{base_url}}
+
+
+# TODO
