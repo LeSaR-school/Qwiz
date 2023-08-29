@@ -2,12 +2,12 @@ pub mod routes;
 
 
 
-use crate::crypto;
-use crate::media;
 use crate::POOL;
+use crate::crypto;
+use crate::media::Media;
 
 use serde::{Serialize, Deserialize};
-use sqlx::{types::Uuid, postgres::PgQueryResult};
+use sqlx::types::Uuid;
 
 
 
@@ -53,11 +53,11 @@ impl Account {
 	
 	}
 	
-	pub async fn new(username: &String, password: &String, account_type: &AccountType, profile_picture_url: &Option<String>) -> Result<Self, sqlx::Error> {
+	pub async fn new(username: &String, password: &String, account_type: &AccountType, profile_picture_uri: &Option<String>) -> Result<Self, sqlx::Error> {
 
 		let password_hash = crypto::encode_password(password);
-		let profile_picture_uuid = match profile_picture_url {
-			Some(url) => Some(media::upload(url).await?),
+		let profile_picture_uuid = match profile_picture_uri {
+			Some(uri) => Some(Media::new(uri).await?.uuid),
 			None => None
 		};
 
@@ -118,17 +118,37 @@ impl Account {
 		Ok(())
 
 	}
-	pub async fn update_profile_picture_url(&mut self, new_profile_picture_url: &String) -> Result<PgQueryResult, sqlx::Error> {
+	pub async fn update_profile_picture_url(&mut self, new_profile_picture_uri: &String) -> Result<(), sqlx::Error> {
 
-		media::update(&mut self.profile_picture_uuid, new_profile_picture_url).await?;
-		
-		sqlx::query!(
-			"UPDATE account SET profile_picture_uuid=$1 WHERE id=$2",
-			self.profile_picture_uuid,
-			self.id,
-		)
-		.execute(POOL.get().await)
-		.await
+		match self.profile_picture_uuid {
+			Some(uuid) => Media::get_by_uuid(&uuid).await?.update(new_profile_picture_uri).await?,
+			None => {
+				
+				let media = Media::new(new_profile_picture_uri).await?;
+				
+				sqlx::query!(
+					"UPDATE account SET profile_picture_uuid=$1 WHERE id=$2",
+					media.uuid,
+					self.id,
+				)
+				.execute(POOL.get().await)
+				.await?;
+
+				self.profile_picture_uuid = Some(media.uuid);
+
+			},
+		};
+
+		Ok(())
+
+	}
+
+	pub async fn verify_password(&mut self, password: &String) -> Result<bool, sqlx::Error> {
+
+		match crypto::verify_password(password, &self.password_hash).await {
+			Ok(true) => self.update_password(password).await.map(|_| true),
+			other => other,
+		}
 
 	}
 

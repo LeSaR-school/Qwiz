@@ -1,9 +1,8 @@
-use super::NewQuestionData;
-use crate::{BASE_URL, media};
+use crate::BASE_URL;
 use crate::account::Account;
 use crate::qwiz::Qwiz;
-use crate::question::Question;
-use crate::crypto::verify_password;
+use crate::question::{Question, NewQuestionData};
+use crate::media::Media;
 use rocket::{Route, Either};
 use rocket::response::status::{Created, BadRequest};
 use rocket::{http::Status, serde::json::Json};
@@ -69,7 +68,7 @@ pub struct GetQuestionData {
 	answer3: Option<String>,
 	answer4: Option<String>,
 	correct: i16,
-	embed_url: Option<String>,
+	embed_uri: Option<String>,
 }
 impl GetQuestionData {
 	
@@ -83,8 +82,8 @@ impl GetQuestionData {
 				answer3: question.answer3,
 				answer4: question.answer4,
 				correct: question.correct,
-				embed_url: match question.embed_uuid {
-					Some(uuid) => media::get_by_uuid(&uuid).await.ok(),
+				embed_uri: match question.embed_uuid {
+					Some(uuid) => Media::get_by_uuid(&uuid).await.ok().map(|m| m.uri),
 					None => None,
 				},
 			}
@@ -96,22 +95,22 @@ impl GetQuestionData {
 #[get("/question/<qwiz_id>/<index>")]
 async fn get_question_by_uuid_index(qwiz_id: i32, index: i32) -> Result<Json<GetQuestionData>, Status> {
 
-	match Question::get_by_qwiz_id_index(&qwiz_id, &index).await {
-		Ok(question) => {
-			match GetQuestionData::from_question(question).await {
-				Ok(data) => Ok(Json(data)),
-				Err(e) => {
-
-					eprintln!("{e}");
-					Err(Status::InternalServerError)
-					
-				},
-			}
-		},
+	let question = match Question::get_by_qwiz_id_index(&qwiz_id, &index).await {
+		Ok(q) => q,
 		Err(e) => {
 
 			eprintln!("{e}");
-			Err(Status::NotFound)
+			return Err(Status::NotFound)
+			
+		},
+	};
+
+	match GetQuestionData::from_question(question).await {
+		Ok(data) => Ok(Json(data)),
+		Err(e) => {
+
+			eprintln!("{e}");
+			Err(Status::InternalServerError)
 			
 		},
 	}
@@ -149,22 +148,19 @@ async fn create_question(qwiz_id: i32, question_data: Json<PostQuestionData>) ->
 		},
 	};
 
-	match verify_password(&question_data.creator_password, &mut account).await {
-		Ok(verified) => {
-			if verified {
-				match Question::from_question_data(&qwiz_id, &question_data.question).await {
-					Ok(question) => Ok(Created::new(format!("{}/question/{}/{}", BASE_URL, qwiz_id, question.index))),
-					Err(e) => {
+	match account.verify_password(&question_data.creator_password).await {
+		Ok(true) => {
+			match Question::from_question_data(&qwiz_id, &question_data.question).await {
+				Ok(question) => Ok(Created::new(format!("{BASE_URL}/question/{qwiz_id}/{}", question.index))),
+				Err(e) => {
 
-						eprintln!("{e}");
-						Err(Status::BadRequest)
-						
-					},
-				}
-			} else {
-				Err(Status::Unauthorized)
+					eprintln!("{e}");
+					Err(Status::BadRequest)
+					
+				},
 			}
 		},
+		Ok(false) => Err(Status::Unauthorized),
 		Err(e) => {
 
 			eprintln!("{e}");
@@ -195,84 +191,79 @@ struct PatchQuestionData {
 #[patch("/question/<qwiz_id>/<index>", data = "<new_question_data>")]
 async fn update_question(qwiz_id: i32, index: i32, new_question_data: Json<PatchQuestionData>) -> Result<Status, Either<Status, BadRequest<&'static str>>> {
 
-	match Question::get_by_qwiz_id_index(&qwiz_id, &index).await {
-		Ok(mut question) => {
-
-			let qwiz = match Qwiz::get_by_id(&qwiz_id).await {
-				Ok(qwiz) => qwiz,
-				Err(e) => {
-
-					eprintln!("{e}");
-					return Err(Either::Left(Status::NotFound))
-					
-				},
-			};
-		
-			let mut account = match Account::get_by_id(&qwiz.creator_id).await {
-				Ok(acc) => acc,
-				Err(e) => {
-
-					eprintln!("{e}");
-					return Err(Either::Left(Status::InternalServerError))
-					
-				},
-			};
-
-			match verify_password(&new_question_data.creator_password, &mut account).await {
-				Ok(verified) => {
-					if verified {
-
-						if let Some(new_index) = &new_question_data.new_index {
-							if question.update_index(new_index).await.is_err() {
-								return Err(Either::Right(BadRequest(Some("Bad index"))));
-							}
-						}
-
-						if let Some(new_body) = &new_question_data.new_body {
-							if question.update_body(new_body).await.is_err() {
-								return Err(Either::Right(BadRequest(Some("Bad body"))));
-							}
-						}
-
-						if let Some(new_answers) = &new_question_data.new_answers {
-							for new_answer in new_answers {
-								if question.update_answer(&new_answer.index, &new_answer.content).await.is_err() {
-									return Err(Either::Right(BadRequest(Some("Bad answer"))));
-								}
-							}
-						}
-
-						if let Some(new_correct) = &new_question_data.new_correct {
-							if question.update_correct(new_correct).await.is_err() {
-								return Err(Either::Right(BadRequest(Some("Bad correct"))));
-							}
-						}
-
-						if let Some(new_embed_url) = &new_question_data.new_embed_url {
-							if question.update_embed_url(new_embed_url).await.is_err() {
-								return Err(Either::Right(BadRequest(Some("Bad embed url"))));
-							}
-						}
-
-						Ok(Status::Ok)
-
-					} else {
-						Err(Either::Left(Status::Unauthorized))
-					}
-				},
-				Err(e) => {
-
-					eprintln!("{e}");
-					Err(Either::Left(Status::InternalServerError))
-					
-				},
-			}
-
-		},
+	let mut question = match Question::get_by_qwiz_id_index(&qwiz_id, &index).await {
+		Ok(q) => q,
 		Err(e) => {
 
 			eprintln!("{e}");
-			Err(Either::Left(Status::NotFound))
+			return Err(Either::Left(Status::NotFound))
+			
+		},
+	};
+
+	let qwiz = match Qwiz::get_by_id(&qwiz_id).await {
+		Ok(qwiz) => qwiz,
+		Err(e) => {
+
+			eprintln!("{e}");
+			return Err(Either::Left(Status::NotFound))
+			
+		},
+	};
+
+	let mut account = match Account::get_by_id(&qwiz.creator_id).await {
+		Ok(acc) => acc,
+		Err(e) => {
+
+			eprintln!("{e}");
+			return Err(Either::Left(Status::InternalServerError))
+			
+		},
+	};
+
+	match account.verify_password(&new_question_data.creator_password).await {
+		Ok(true) => {
+
+			if let Some(new_index) = &new_question_data.new_index {
+				if question.update_index(new_index).await.is_err() {
+					return Err(Either::Right(BadRequest(Some("Bad index"))));
+				}
+			}
+
+			if let Some(new_body) = &new_question_data.new_body {
+				if question.update_body(new_body).await.is_err() {
+					return Err(Either::Right(BadRequest(Some("Bad body"))));
+				}
+			}
+
+			if let Some(new_answers) = &new_question_data.new_answers {
+				for new_answer in new_answers {
+					if question.update_answer(&new_answer.index, &new_answer.content).await.is_err() {
+						return Err(Either::Right(BadRequest(Some("Bad answer"))));
+					}
+				}
+			}
+
+			if let Some(new_correct) = &new_question_data.new_correct {
+				if question.update_correct(new_correct).await.is_err() {
+					return Err(Either::Right(BadRequest(Some("Bad correct"))));
+				}
+			}
+
+			if let Some(new_embed_url) = &new_question_data.new_embed_url {
+				if question.update_embed_uri(new_embed_url).await.is_err() {
+					return Err(Either::Right(BadRequest(Some("Bad embed url"))));
+				}
+			}
+
+			Ok(Status::Ok)
+
+		}
+		Ok(false) => Err(Either::Left(Status::Unauthorized)),
+		Err(e) => {
+
+			eprintln!("{e}");
+			Err(Either::Left(Status::InternalServerError))
 			
 		},
 	}
@@ -289,45 +280,40 @@ struct DeleteQuestionData {
 #[delete("/question/<qwiz_id>/<index>", data = "<delete_question_data>")]
 async fn delete_question(qwiz_id: i32, index: i32, delete_question_data: Json<DeleteQuestionData>) -> Status {
 
-	match Question::get_by_qwiz_id_index(&qwiz_id, &index).await {
-		Ok(question) => {
+	let question = match Question::get_by_qwiz_id_index(&qwiz_id, &index).await {
+		Ok(q) => q,
+		Err(e) => {
+
+			eprintln!("{e}");
+			return Status::NotFound
 			
-			let qwiz = match Qwiz::get_by_id(&qwiz_id).await {
-				Ok(qwiz) => qwiz,
-				Err(e) => {
+		},
+	};
 
-					eprintln!("{e}");
-					return Status::NotFound
-					
-				},
-			};
-		
-			let mut account = match Account::get_by_id(&qwiz.creator_id).await {
-				Ok(acc) => acc,
-				Err(e) => {
+	let qwiz = match Qwiz::get_by_id(&qwiz_id).await {
+		Ok(qwiz) => qwiz,
+		Err(e) => {
 
-					eprintln!("{e}");
-					return Status::InternalServerError
+			eprintln!("{e}");
+			return Status::NotFound
+			
+		},
+	};
 
-				},
-			};
+	let mut account = match Account::get_by_id(&qwiz.creator_id).await {
+		Ok(acc) => acc,
+		Err(e) => {
 
-			match verify_password(&delete_question_data.creator_password, &mut account).await {
-				Ok(verified) => {
-					if verified {
-						match question.delete().await {
-							Ok(_) => Status::Ok,
-							Err(e) => {
+			eprintln!("{e}");
+			return Status::InternalServerError
 
-								eprintln!("{e}");
-								Status::InternalServerError
-								
-							},
-						}
-					} else {
-						Status::Unauthorized
-					}
-				},
+		},
+	};
+
+	match account.verify_password(&delete_question_data.creator_password).await {
+		Ok(true) => {
+			match question.delete().await {
+				Ok(_) => Status::Ok,
 				Err(e) => {
 
 					eprintln!("{e}");
@@ -335,12 +321,12 @@ async fn delete_question(qwiz_id: i32, index: i32, delete_question_data: Json<De
 					
 				},
 			}
-
 		},
+		Ok(false) => Status::Unauthorized,
 		Err(e) => {
 
 			eprintln!("{e}");
-			Status::NotFound
+			Status::InternalServerError
 			
 		},
 	}

@@ -10,7 +10,7 @@
 @new_account_type = Parent
 
 # fill in after first post
-@uuid = 
+@id = 1
 
 
 
@@ -29,7 +29,7 @@ POST {{base_url}}
 
 
 ### get by id
-GET {{base_url}}/{{uuid}}
+GET {{base_url}}/{{id}}
 
 ### get by username
 GET {{base_url}}/{{username}}
@@ -45,7 +45,7 @@ PATCH {{base_url}}/00000000-0000-0000-0000-000000000000
 }
 
 ### invalid patch - password
-PATCH {{base_url}}/{{uuid}}
+PATCH {{base_url}}/{{id}}
 
 {
 	"password": "1",
@@ -53,7 +53,7 @@ PATCH {{base_url}}/{{uuid}}
 }
 
 ### invalid account type patch
-PATCH {{base_url}}/{{uuid}}
+PATCH {{base_url}}/{{id}}
 
 {
 	"password": "{{password}}",
@@ -61,7 +61,7 @@ PATCH {{base_url}}/{{uuid}}
 }
 
 ### valid account type patch
-PATCH {{base_url}}/{{uuid}}
+PATCH {{base_url}}/{{id}}
 
 {
 	"password": "{{password}}",
@@ -69,7 +69,7 @@ PATCH {{base_url}}/{{uuid}}
 }
 
 ### valid profile picture url patch
-PATCH {{base_url}}/{{uuid}}
+PATCH {{base_url}}/{{id}}
 
 {
 	"password": "{{password}}",
@@ -77,7 +77,7 @@ PATCH {{base_url}}/{{uuid}}
 }
 
 ### valid password patch
-PATCH {{base_url}}/{{uuid}}
+PATCH {{base_url}}/{{id}}
 
 {
 	"password": "{{password}}",
@@ -94,14 +94,14 @@ DELETE {{base_url}}/00000000-0000-0000-0000-000000000000
 }
 
 ### invalid delete - password
-DELETE {{base_url}}/{{uuid}}
+DELETE {{base_url}}/{{id}}
 
 {
 	"password": "1"
 }
 
 ### valid delete
-DELETE {{base_url}}/{{uuid}}
+DELETE {{base_url}}/{{id}}
 
 {
 	"password": "{{new_password}}"

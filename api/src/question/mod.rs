@@ -1,7 +1,9 @@
 pub mod routes;
 
+
+
 use crate::POOL;
-use crate::media;
+use crate::media::Media;
 
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
@@ -15,7 +17,7 @@ pub struct NewQuestionData {
 	pub answer3: Option<String>,
 	pub answer4: Option<String>,
 	pub correct: i16,
-	pub embed_url: Option<String>,
+	pub embed_uri: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -59,8 +61,8 @@ impl Question {
 
 	pub async fn from_question_data(qwiz_id: &i32, data: &NewQuestionData) -> Result<Self, sqlx::Error> {
 
-		let embed_uuid = match &data.embed_url {
-			Some(url) => Some(media::upload(url).await?),
+		let embed_uuid = match &data.embed_uri {
+			Some(uri) => Some(Media::new(uri).await?.uuid),
 			None => None
 		};
 
@@ -118,13 +120,13 @@ impl Question {
 		let answers3: Vec<String> = datas.iter().map(|d| d.answer3.to_owned().unwrap_or("".to_owned())).collect();
 		let answers4: Vec<String> = datas.iter().map(|d| d.answer4.to_owned().unwrap_or("".to_owned())).collect();
 		let corrects: Vec<i16> = datas.iter().map(|d| d.correct).collect();
-		let embed_uuids: Vec<Uuid> = media::upload_multiple(
-			datas.iter().map(|d| d.embed_url.to_owned()).collect::<Vec<Option<String>>>()
-		)
-		.await?
-		.iter()
-		.map(|u| u.unwrap_or(Uuid::default()))
-		.collect();
+
+		let uris: Vec<&Option<String>> = datas.iter().map(|d| &d.embed_uri).collect();	
+		let embed_uuids: Vec<Uuid> = Media::new_multiple(uris)
+			.await?
+			.into_iter()
+			.map(|m| m.map_or(Uuid::default(), |m| m.uuid.clone()))
+			.collect();
 
 		sqlx::query_as!(
 			Question,
@@ -343,18 +345,27 @@ impl Question {
 		Ok(())
 
 	}
-	pub async fn update_embed_url(&mut self, new_embed_url: &String) -> Result<(), sqlx::Error> {
+	pub async fn update_embed_uri(&mut self, new_embed_uri: &String) -> Result<(), sqlx::Error> {
 
-		media::update(&mut self.embed_uuid, new_embed_url).await?;
+		match self.embed_uuid {
+			Some(uuid) => Media::get_by_uuid(&uuid).await?.update(new_embed_uri).await?,
+			None => {
+				
+				let media = Media::new(new_embed_uri).await?;
+				
+				sqlx::query!(
+					"UPDATE question SET embed_uuid=$1 WHERE qwiz_id=$2 AND index=$3",
+					media.uuid,
+					self.qwiz_id,
+					self.index,
+				)
+				.execute(POOL.get().await)
+				.await?;
 
-		sqlx::query!(
-			"UPDATE question SET embed_uuid=$1 WHERE qwiz_id=$2 AND index=$3",
-			self.embed_uuid,
-			self.qwiz_id,
-			self.index,
-		)
-		.execute(POOL.get().await)
-		.await?;
+				self.embed_uuid = Some(media.uuid);
+
+			},
+		};
 
 		Ok(())
 

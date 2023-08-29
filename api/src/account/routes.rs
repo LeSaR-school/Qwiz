@@ -1,8 +1,7 @@
 use crate::BASE_URL;
 use crate::account::{Account, AccountType};
-use crate::crypto::verify_password;
 use rocket::response::status::{BadRequest, Created};
-use rocket::{Route, Either};
+use rocket::{Route, Either::{self, *}};
 use rocket::{http::Status, serde::json::Json};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -115,7 +114,7 @@ struct PostAccountData {
 async fn create_account(account_data: Json<PostAccountData>) -> Result<Created<String>, Status> {
 
 	match Account::new(&account_data.username, &account_data.password, &account_data.account_type, &account_data.profile_picture_url).await {
-		Ok(account) => Ok(Created::new(format!("{}/account/{}", BASE_URL, account.id.to_string()))),
+		Ok(account) => Ok(Created::new(format!("{BASE_URL}/account/{}", account.id.to_string()))),
 		Err(e) => {
 			
 			eprintln!("{e}");
@@ -139,49 +138,46 @@ struct PatchAccountData {
 #[patch("/account/<id>", data = "<new_account_data>")]
 async fn update_account(id: i32, new_account_data: Json<PatchAccountData>) -> Result<Status, Either<Status, BadRequest<&'static str>>> {
 
-	match Account::get_by_id(&id).await {
-		Ok(mut account) => {
-			match verify_password(&new_account_data.password, &mut account).await {
-				Ok(verified) => {
-					if verified {
-
-						if let Some(new_account_type) = &new_account_data.new_account_type {
-							if account.update_account_type(new_account_type).await.is_err() {
-								return Err(Either::Right(BadRequest(Some("Bad account type"))));
-							}
-						}
-
-						if let Some(new_password) = &new_account_data.new_password {
-							if account.update_password(new_password).await.is_err() {
-								return Err(Either::Right(BadRequest(Some("Bad password"))));
-							}
-						}
-
-						if let Some(new_profile_picture_url) = &new_account_data.new_profile_picture_url {
-							if account.update_profile_picture_url(new_profile_picture_url).await.is_err() {
-								return Err(Either::Right(BadRequest(Some("Bad profile picture url"))));
-							}
-						}
-
-						Ok(Status::Ok)
-
-					} else {
-						Err(Either::Left(Status::Unauthorized))
-					}
-				},
-				Err(e) => {
-
-					eprintln!("{e}");
-					Err(Either::Left(Status::InternalServerError))
-		
-				},
-			}
-		},
+	let mut account = match Account::get_by_id(&id).await {
+		Ok(acc) => acc,
 		Err(e) => {
 
 			eprintln!("{e}");
-			Err(Either::Left(Status::NotFound))
+			return Err(Left(Status::NotFound))
 			
+		},
+	};
+
+	match account.verify_password(&new_account_data.password).await {
+		Ok(true) => {
+
+			if let Some(new_account_type) = &new_account_data.new_account_type {
+				if account.update_account_type(new_account_type).await.is_err() {
+					return Err(Right(BadRequest(Some("Bad account type"))));
+				}
+			}
+
+			if let Some(new_password) = &new_account_data.new_password {
+				if account.update_password(new_password).await.is_err() {
+					return Err(Right(BadRequest(Some("Bad password"))));
+				}
+			}
+
+			if let Some(new_profile_picture_url) = &new_account_data.new_profile_picture_url {
+				if account.update_profile_picture_url(new_profile_picture_url).await.is_err() {
+					return Err(Right(BadRequest(Some("Bad profile picture url"))));
+				}
+			}
+
+			Ok(Status::Ok)
+
+		},
+		Ok(false) => Err(Left(Status::Unauthorized)),
+		Err(e) => {
+
+			eprintln!("{e}");
+			Err(Left(Status::InternalServerError))
+
 		},
 	}
 
@@ -197,24 +193,20 @@ struct DeleteAccountData {
 #[delete("/account/<id>", data = "<delete_account_data>")]
 async fn delete_account(id: i32, delete_account_data: Json<DeleteAccountData>) -> Status {
 
-	match Account::get_by_id(&id).await {
-		Ok(mut account) => {
-			match verify_password(&delete_account_data.password, &mut account).await {
-				Ok(verified) => {
-					if verified {
-						match account.delete().await {
-							Ok(_) => Status::Ok,
-							Err(e) => {
+	let mut account = match Account::get_by_id(&id).await {
+		Ok(acc) => acc,
+		Err(e) => {
 
-								eprintln!("{e}");
-								Status::InternalServerError
-								
-							},
-						}
-					} else {
-						Status::Unauthorized
-					}
-				},
+			eprintln!("{e}");
+			return Status::NotFound
+			
+		},
+	};
+
+	match account.verify_password(&delete_account_data.password).await {
+		Ok(true) => {
+			match account.delete().await {
+				Ok(_) => Status::Ok,
 				Err(e) => {
 
 					eprintln!("{e}");
@@ -223,10 +215,11 @@ async fn delete_account(id: i32, delete_account_data: Json<DeleteAccountData>) -
 				},
 			}
 		},
+		Ok(false) => Status::Unauthorized,
 		Err(e) => {
 
 			eprintln!("{e}");
-			Status::NotFound
+			Status::InternalServerError
 			
 		},
 	}

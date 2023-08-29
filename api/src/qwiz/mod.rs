@@ -1,9 +1,11 @@
 pub mod routes;
 
-use crate::{POOL, media};
 
+
+use crate::POOL;
+use crate::media::Media;
 use serde::Deserialize;
-use sqlx::{types::Uuid};
+use sqlx::types::Uuid;
 
 
 
@@ -11,7 +13,7 @@ use sqlx::{types::Uuid};
 pub struct NewQwizData {
 	pub name: String,
 	pub creator_id: i32,
-	pub thumbnail_url: Option<String>
+	pub thumbnail_uri: Option<String>
 }
 
 pub struct Qwiz {
@@ -45,8 +47,8 @@ impl Qwiz {
 		.fetch_one(POOL.get().await)
 		.await?;
 
-		let thumbnail_uuid = match &data.thumbnail_url {
-			Some(url) => Some(media::upload(url).await?),
+		let thumbnail_uuid = match &data.thumbnail_uri {
+			Some(uri) => Some(Media::new(uri).await?.uuid),
 			None => None,
 		};
 
@@ -89,9 +91,26 @@ impl Qwiz {
 		Ok(())
 
 	}
-	pub async fn update_thumbnail_url(&mut self, new_thumbnail_url: &String) -> Result<(), sqlx::Error> {
+	pub async fn update_thumbnail_uri(&mut self, new_thumbnail_uri: &String) -> Result<(), sqlx::Error> {
 
-		media::update(&mut self.thumbnail_uuid, new_thumbnail_url).await?;
+		match self.thumbnail_uuid {
+			Some(uuid) => Media::get_by_uuid(&uuid).await?.update(new_thumbnail_uri).await?,
+			None => {
+				
+				let media = Media::new(new_thumbnail_uri).await?;
+				
+				sqlx::query!(
+					"UPDATE qwiz SET thumbnail_uuid=$1 WHERE id=$2",
+					media.uuid,
+					self.id,
+				)
+				.execute(POOL.get().await)
+				.await?;
+
+				self.thumbnail_uuid = Some(media.uuid);
+
+			},
+		};
 
 		Ok(())
 

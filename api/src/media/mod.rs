@@ -1,84 +1,119 @@
-use crate::POOL;
+pub mod routes;
 
+
+
+use crate::{POOL, BASE_URL};
+
+use std::{path::Path, fs, io::Write};
+use base64::{engine::general_purpose, Engine};
+use rocket::Either;
 use uuid::Uuid;
 
 
 
-pub async fn get_by_uuid(uuid: &Uuid) -> Result<String, sqlx::Error> {
-
-	sqlx::query!(
-		"SELECT path FROM media WHERE uuid=$1",
-		uuid,
-	)
-	.fetch_one(POOL.get().await)
-	.await
-	.map(|r| r.path)
-
+pub struct Media {
+	pub uuid: Uuid,
+	pub uri: String,
 }
 
-pub async fn upload(url: &String) -> Result<Uuid, sqlx::Error> {
+impl Media {
 
-	sqlx::query!(
-		"INSERT INTO media (path) VALUES ($1) RETURNING uuid",
-		url
-	).fetch_one(POOL.get().await)
-	.await
-	.map(|r| r.uuid)
+	pub async fn get_by_uuid(uuid: &Uuid) -> Result<Self, sqlx::Error> {
 
-}
+		sqlx::query_as!(
+			Media,
+			"SELECT * FROM media WHERE uuid=$1",
+			uuid,
+		)
+		.fetch_one(POOL.get().await)
+		.await
+	
+	}
+	
+	pub async fn new(uri: &String) -> Result<Self, sqlx::Error> {
 
-pub async fn upload_multiple(urls: Vec<Option<String>>) -> Result<Vec<Option<Uuid>>, sqlx::Error> {
+		sqlx::query_as!(
+			Media,
+			"INSERT INTO media (uri) VALUES ($1) RETURNING *",
+			uri,
+		)
+		.fetch_one(POOL.get().await)
+		.await
+	
+	}
+	pub async fn new_multiple(uris: Vec<&Option<String>>) -> Result<Vec<Option<Self>>, sqlx::Error> {
 
-	let real_urls: Vec<String> = urls.iter().flat_map(|url| url.to_owned()).collect();
+		let real_uris: Vec<String> = uris.clone().into_iter().flat_map(|uri| uri.to_owned()).collect();
 
-	let mut uuids = sqlx::query!(
-		r#"INSERT INTO media (path)
-		SELECT * FROM UNNEST($1::VARCHAR[])
-		RETURNING uuid"#,
-		&real_urls,
-	).fetch_all(POOL.get().await)
-	.await?
-	.into_iter()
-	.map(|r| r.uuid);
+		let mut medias = sqlx::query_as!(
+			Media,
+			r#"INSERT INTO media (uri)
+			SELECT * FROM UNNEST($1::VARCHAR[])
+			RETURNING *"#,
+			&real_uris,
+		)
+		.fetch_all(POOL.get().await)
+		.await?
+		.into_iter();
 
-	let mut real_uuids: Vec<Option<Uuid>> = Vec::new();
+		Ok(uris.into_iter().map(|uri| {
+			match uri {
+				Some(_) => medias.next(),
+				None => None,
+			}
+		}).collect())
 
-	for url in urls {
+	}
+	pub async fn upload(data: &String) -> Result<Self, Either<sqlx::Error, Either<base64::DecodeError, std::io::Error>>> {
 
-		if url.is_some() {
-			real_uuids.push(uuids.next());
-		} else {
-			real_uuids.push(None);
+		let uuid = Uuid::new_v4().to_string();
+		let path_str = format!("{}/media/{uuid}", env!("CARGO_MANIFEST_DIR"));
+		let path = Path::new(&path_str);
+		
+		match general_purpose::STANDARD.decode(data) {
+			Ok(binary) => {
+
+				match fs::OpenOptions::new()
+					.create(true)
+					.write(true)
+					.open(&path)
+				{
+					Ok(mut file) => {
+						
+						file.write_all(&binary)
+							.map_err(|e| Either::Right(Either::Right(e)))?;
+						
+						sqlx::query_as!(
+							Media,
+							"INSERT INTO media (uri) VALUES ($1) RETURNING *",
+							format!("{BASE_URL}/media/{uuid}"),
+						)
+						.fetch_one(POOL.get().await)
+						.await
+						.map_err(|e| Either::Left(e))
+
+					},
+					Err(e) => return Err(Either::Right(Either::Right(e))),
+				}
+
+			},
+			Err(e) => Err(Either::Right(Either::Left(e))),
 		}
 
 	}
+	
+	pub async fn update(&mut self, new_uri: &String) -> Result<(), sqlx::Error> {
 
-	Ok(real_uuids)
+		sqlx::query!(
+			"UPDATE media SET uri=$1 WHERE uuid=$2",
+			new_uri,
+			self.uuid,
+		)
+		.execute(POOL.get().await)
+		.await?;
 
-}
-
-pub async fn update(uuid: &mut Option<Uuid>, new_url: &String) -> Result<(), sqlx::Error> {
-
-	*uuid = Some(
-		match uuid {
-			Some(id) => sqlx::query!(
-				"UPDATE media SET path=$1 WHERE uuid=$2 RETURNING uuid",
-				new_url,
-				*id
-			)
-			.fetch_one(POOL.get().await)
-			.await?
-			.uuid,
-			None => sqlx::query!(
-				"INSERT INTO media (path) VALUES ($1) RETURNING uuid",
-				new_url
-			)
-			.fetch_one(POOL.get().await)
-			.await?
-			.uuid,
-		}
-	);
-
-	Ok(())
+		Ok(())
+	
+	}
 
 }

@@ -4,6 +4,8 @@ mod question;
 mod media;
 mod crypto;
 
+
+
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate lazy_static;
 
@@ -43,6 +45,7 @@ fn rocket() -> _ {
 	routes.append(&mut account::routes::all());
 	routes.append(&mut qwiz::routes::all());
 	routes.append(&mut question::routes::all());
+	routes.append(&mut media::routes::all());
 
 	rocket::build()
 		.register(BASE_URL, catchers![default_catcher])

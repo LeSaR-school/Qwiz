@@ -16,3 +16,4 @@ rocket = { version = "=0.5.0-rc.3", features = [ "json", "uuid" ] }
 serde = "1.0.171"
 lazy_static = "1.4.0"
 async_once = "0.2.6"
+base64 = "0.21.2"

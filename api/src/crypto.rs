@@ -1,8 +1,6 @@
 use sha2::{Sha512, Digest};
 use rand::Rng;
 
-use crate::account::Account;
-
 
 
 static MAX_ITERATIONS: u32 = 127;
@@ -26,7 +24,7 @@ pub fn encode_password(password: &String) -> String {
 
 }
 
-pub async fn verify_password(password: &String, account: &mut Account) -> Result<bool, sqlx::Error> {
+pub async fn verify_password(password: &String, password_hash: &String) -> Result<bool, sqlx::Error> {
 
 	let mut hasher = Sha512::new();
 	hasher.update(password);
@@ -38,14 +36,9 @@ pub async fn verify_password(password: &String, account: &mut Account) -> Result
 		hasher.update(bytes);
 		bytes = hasher.finalize().into();
 
-		if hex::encode(bytes) == account.password_hash {
-
-			// update account password hash after each verification
-			account.update_password(password).await?;
-
+		if hex::encode(bytes) == *password_hash {
 			return Ok(true);
-
-		};
+		}
 		
 	}
 
