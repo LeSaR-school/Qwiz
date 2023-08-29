@@ -1,11 +1,15 @@
 use crate::BASE_URL;
 use crate::account::Account;
 use crate::qwiz::Qwiz;
-use crate::question::{Question, NewQuestionData};
-use crate::media::Media;
-use rocket::{Route, Either};
-use rocket::response::status::{Created, BadRequest};
-use rocket::{http::Status, serde::json::Json};
+use crate::question::{Question, NewQuestionData, QuestionError};
+use crate::media::{Media, NewMediaData, routes::GetMediaData};
+use rocket::{
+	http::Status,
+	serde::json::Json,
+	response::status::{Created, BadRequest},
+	Route,
+	Either::{self, *}
+};
 use serde::{Serialize, Deserialize};
 
 
@@ -30,30 +34,35 @@ r#"
 GET /question/<qwiz_id>/<index> - get question data by qwiz id and index
 
 POST /question/<qwiz_id> - add a question to an existing qwiz
-"creator_password": String - required
-"question": {
-	"body": String - required,
-	"answer1": String - required,
-	"answer2": String - required,
-	"answer3": String - optional,
-	"answer4": String - optional,
-	"correct": 1 / 2 / 3 / 4 - required,
-	"embed_url": String - optional,
+creator_password: String - required
+question: {
+	body: String - required,
+	answer1: String - required,
+	answer2: String - required,
+	answer3: String - optional,
+	answer4: String - optional,
+	correct: 1 / 2 / 3 / 4 - required,
+	embed: {
+		data: String - required
+		media_type: MediaType - required
+	} - optional
 } - required
 
 PATCH /question/<qwiz_id>/<index> - update question data
-"creator_password": String - required
-"new_index": i32 - optional
-"new_body": String - optional
-"new answers": Vector of {
-	"index": 1 / 2 / 3 / 4 - required,
-	"new_answer": String - optional (null to delete)
+creator_password: String - required
+new_index: i32 - optional
+new_body: String - optional
+new answers: Vector of {
+	index: 1 / 2 / 3 / 4 - required,
+	new_answer: String - optional (null to delete)
 } - optional
-"new_embed_url": String - optional
+new_embed: {
+	data: String - required
+	media_type: MediaType - required
+} - optional
 
 DELETE /question/<qwiz_id> - delete question
-"creator_password": String - required
-
+creator_password: String - required
 "#
 }
 
@@ -68,26 +77,24 @@ pub struct GetQuestionData {
 	answer3: Option<String>,
 	answer4: Option<String>,
 	correct: i16,
-	embed_uri: Option<String>,
+	embed: Option<GetMediaData>,
 }
 impl GetQuestionData {
 	
-	pub async fn from_question(question: Question) -> Result<Self, sqlx::Error> {
-		Ok(
-			Self {
-				index: question.index,
-				body: question.body,
-				answer1: question.answer1,
-				asnwer2: question.answer2,
-				answer3: question.answer3,
-				answer4: question.answer4,
-				correct: question.correct,
-				embed_uri: match question.embed_uuid {
-					Some(uuid) => Media::get_by_uuid(&uuid).await.ok().map(|m| m.uri),
-					None => None,
-				},
-			}
-		)
+	pub async fn from_question(question: Question) -> Self {
+		Self {
+			index: question.index,
+			body: question.body,
+			answer1: question.answer1,
+			asnwer2: question.answer2,
+			answer3: question.answer3,
+			answer4: question.answer4,
+			correct: question.correct,
+			embed: match question.embed_uuid {
+				Some(uuid) => Media::get_by_uuid(&uuid).await.ok().map(Into::into),
+				None => None,
+			},
+		}
 	}
 
 }
@@ -95,22 +102,12 @@ impl GetQuestionData {
 #[get("/question/<qwiz_id>/<index>")]
 async fn get_question_by_uuid_index(qwiz_id: i32, index: i32) -> Result<Json<GetQuestionData>, Status> {
 
-	let question = match Question::get_by_qwiz_id_index(&qwiz_id, &index).await {
-		Ok(q) => q,
+	match Question::get_by_qwiz_id_index(&qwiz_id, &index).await {
+		Ok(question) => Ok(Json(GetQuestionData::from_question(question).await)),
 		Err(e) => {
 
 			eprintln!("{e}");
-			return Err(Status::NotFound)
-			
-		},
-	};
-
-	match GetQuestionData::from_question(question).await {
-		Ok(data) => Ok(Json(data)),
-		Err(e) => {
-
-			eprintln!("{e}");
-			Err(Status::InternalServerError)
+			Err(Status::NotFound)
 			
 		},
 	}
@@ -185,7 +182,7 @@ struct PatchQuestionData {
 	new_body: Option<String>,
 	new_answers: Option<Vec<NewAnswer>>,
 	new_correct: Option<i16>,
-	new_embed_url: Option<String>,
+	new_embed: Option<NewMediaData>,
 }
 
 #[patch("/question/<qwiz_id>/<index>", data = "<new_question_data>")]
@@ -196,7 +193,7 @@ async fn update_question(qwiz_id: i32, index: i32, new_question_data: Json<Patch
 		Err(e) => {
 
 			eprintln!("{e}");
-			return Err(Either::Left(Status::NotFound))
+			return Err(Left(Status::NotFound))
 			
 		},
 	};
@@ -206,7 +203,7 @@ async fn update_question(qwiz_id: i32, index: i32, new_question_data: Json<Patch
 		Err(e) => {
 
 			eprintln!("{e}");
-			return Err(Either::Left(Status::NotFound))
+			return Err(Left(Status::NotFound))
 			
 		},
 	};
@@ -216,7 +213,7 @@ async fn update_question(qwiz_id: i32, index: i32, new_question_data: Json<Patch
 		Err(e) => {
 
 			eprintln!("{e}");
-			return Err(Either::Left(Status::InternalServerError))
+			return Err(Left(Status::InternalServerError))
 			
 		},
 	};
@@ -226,44 +223,59 @@ async fn update_question(qwiz_id: i32, index: i32, new_question_data: Json<Patch
 
 			if let Some(new_index) = &new_question_data.new_index {
 				if question.update_index(new_index).await.is_err() {
-					return Err(Either::Right(BadRequest(Some("Bad index"))));
+					return Err(Right(BadRequest(Some("Bad index"))));
 				}
 			}
 
 			if let Some(new_body) = &new_question_data.new_body {
 				if question.update_body(new_body).await.is_err() {
-					return Err(Either::Right(BadRequest(Some("Bad body"))));
+					return Err(Right(BadRequest(Some("Bad body"))));
 				}
 			}
 
 			if let Some(new_answers) = &new_question_data.new_answers {
 				for new_answer in new_answers {
 					if question.update_answer(&new_answer.index, &new_answer.content).await.is_err() {
-						return Err(Either::Right(BadRequest(Some("Bad answer"))));
+						return Err(Right(BadRequest(Some("Bad answer"))));
 					}
 				}
 			}
 
 			if let Some(new_correct) = &new_question_data.new_correct {
 				if question.update_correct(new_correct).await.is_err() {
-					return Err(Either::Right(BadRequest(Some("Bad correct"))));
+					return Err(Right(BadRequest(Some("Bad correct"))));
 				}
 			}
 
-			if let Some(new_embed_url) = &new_question_data.new_embed_url {
-				if question.update_embed_uri(new_embed_url).await.is_err() {
-					return Err(Either::Right(BadRequest(Some("Bad embed url"))));
+			if let Some(new_embed) = &new_question_data.new_embed {
+				use QuestionError::*;
+
+				match question.update_embed(new_embed).await {
+					Ok(_) => (),
+					Err(SqlxError(e)) => {
+						
+						eprintln!("{e}");
+						return Err(Left(Status::InternalServerError))
+
+					},
+					Err(Base64Error(_)) => return Err(Right(BadRequest(Some("Bad embed base64")))),
+					Err(IOError(e)) => {
+						
+						eprintln!("{e}");
+						return Err(Left(Status::InternalServerError))
+
+					},
 				}
 			}
 
 			Ok(Status::Ok)
 
 		}
-		Ok(false) => Err(Either::Left(Status::Unauthorized)),
+		Ok(false) => Err(Left(Status::Unauthorized)),
 		Err(e) => {
 
 			eprintln!("{e}");
-			Err(Either::Left(Status::InternalServerError))
+			Err(Left(Status::InternalServerError))
 			
 		},
 	}

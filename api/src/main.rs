@@ -12,8 +12,7 @@ mod crypto;
 
 
 use std::str::FromStr;
-
-use rocket::{http::Status, Request};
+use rocket::{http::Status, Request, fs::{FileServer, relative}};
 use sqlx::{Pool, Postgres, postgres::{PgPoolOptions, PgConnectOptions}, ConnectOptions};
 use async_once::AsyncOnce;
 
@@ -50,6 +49,7 @@ fn rocket() -> _ {
 	rocket::build()
 		.register(BASE_URL, catchers![default_catcher])
 		.mount(BASE_URL, routes)
+		.mount(format!("{BASE_URL}/media/upload"), FileServer::from(relative!("/media")))
 
 }
 

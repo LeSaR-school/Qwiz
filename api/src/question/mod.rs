@@ -3,10 +3,12 @@ pub mod routes;
 
 
 use crate::POOL;
-use crate::media::Media;
-
+use crate::media::{Media, NewMediaData, MediaError};
+use std::fmt::Display;
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
+
+
 
 #[derive(Deserialize)]
 pub struct NewQuestionData {
@@ -17,8 +19,47 @@ pub struct NewQuestionData {
 	pub answer3: Option<String>,
 	pub answer4: Option<String>,
 	pub correct: i16,
-	pub embed_uri: Option<String>,
+	pub embed_data: Option<NewMediaData>,
 }
+
+
+
+pub enum QuestionError {
+	SqlxError(sqlx::Error),
+	Base64Error(base64::DecodeError),
+	IOError(std::io::Error),
+}
+impl Display for QuestionError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		
+		use QuestionError::*;
+		
+		match self {
+			SqlxError(e) => e.fmt(f),
+			Base64Error(e) => e.fmt(f),
+			IOError(e) => e.fmt(f),
+		}
+
+	}
+}
+impl From<sqlx::Error> for QuestionError {
+	fn from(value: sqlx::Error) -> Self {
+		Self::SqlxError(value)
+	}
+}
+impl From<MediaError> for QuestionError {
+	fn from(value: MediaError) -> Self {
+		
+		match value {
+			MediaError::SqlxError(e) => QuestionError::SqlxError(e),
+			MediaError::Base64Error(e) => QuestionError::Base64Error(e),
+			MediaError::IOError(e) => QuestionError::IOError(e),
+		}
+
+	}
+}
+
+
 
 #[derive(Serialize)]
 pub struct Question {
@@ -61,8 +102,18 @@ impl Question {
 
 	pub async fn from_question_data(qwiz_id: &i32, data: &NewQuestionData) -> Result<Self, sqlx::Error> {
 
-		let embed_uuid = match &data.embed_uri {
-			Some(uri) => Some(Media::new(uri).await?.uuid),
+		let embed_uuid = match &data.embed_data {
+			Some(d) => {
+				match Media::from_media_data(d).await {
+					Ok(m) => Some(m.uuid),
+					Err(e) => {
+
+						eprintln!("{e}");
+						None
+
+					},
+				}
+			},
 			None => None
 		};
 
@@ -111,7 +162,7 @@ impl Question {
 		Ok(question)
 
 	}
-	pub async fn from_question_datas(qwiz_id: &i32, datas: &Vec<NewQuestionData>) -> Result<Vec<Self>, sqlx::Error> {
+	pub async fn from_question_datas(qwiz_id: &i32, datas: &Vec<NewQuestionData>) -> Result<Vec<Self>, QuestionError> {
 
 		let indexes: Vec<i32> = (0..datas.len()).map(|n| n as i32).collect();
 		let bodies: Vec<String> = datas.iter().map(|d| d.body.to_owned()).collect();
@@ -121,8 +172,8 @@ impl Question {
 		let answers4: Vec<String> = datas.iter().map(|d| d.answer4.to_owned().unwrap_or("".to_owned())).collect();
 		let corrects: Vec<i16> = datas.iter().map(|d| d.correct).collect();
 
-		let uris: Vec<&Option<String>> = datas.iter().map(|d| &d.embed_uri).collect();	
-		let embed_uuids: Vec<Uuid> = Media::new_multiple(uris)
+		let medias: Vec<&Option<NewMediaData>> = datas.iter().map(|d| &d.embed_data).collect();
+		let embed_uuids: Vec<Uuid> = Media::from_media_datas(medias)
 			.await?
 			.into_iter()
 			.map(|m| m.map_or(Uuid::default(), |m| m.uuid.clone()))
@@ -147,6 +198,7 @@ impl Question {
 		)
 		.fetch_all(POOL.get().await)
 		.await
+		.map_err(From::from)
 
 	}
 
@@ -345,13 +397,13 @@ impl Question {
 		Ok(())
 
 	}
-	pub async fn update_embed_uri(&mut self, new_embed_uri: &String) -> Result<(), sqlx::Error> {
+	pub async fn update_embed(&mut self, new_data: &NewMediaData) -> Result<(), QuestionError> {
 
 		match self.embed_uuid {
-			Some(uuid) => Media::get_by_uuid(&uuid).await?.update(new_embed_uri).await?,
+			Some(uuid) => Media::get_by_uuid(&uuid).await?.update(new_data).await?,
 			None => {
 				
-				let media = Media::new(new_embed_uri).await?;
+				let media = Media::from_media_data(new_data).await?;
 				
 				sqlx::query!(
 					"UPDATE question SET embed_uuid=$1 WHERE qwiz_id=$2 AND index=$3",

@@ -1,12 +1,16 @@
 use crate::BASE_URL;
 use crate::account::Account;
-use crate::qwiz::Qwiz;
+use crate::qwiz::{Qwiz, QwizError};
 use crate::question::{Question, NewQuestionData, routes::GetQuestionData};
-use crate::media::Media;
+use crate::media::{Media, NewMediaData, routes::GetMediaData};
 
-use rocket::response::status::{BadRequest, Created};
-use rocket::{Route, Either};
-use rocket::{http::Status, serde::json::Json};
+use rocket::{
+	http::Status,
+	serde::json::Json,
+	response::status::{BadRequest, Created},
+	Route,
+	Either::{self, *},
+};
 use serde::{Deserialize, Serialize};
 
 use super::NewQwizData;
@@ -33,30 +37,32 @@ r#"
 GET /qwiz/<id> - get qwiz data by id
 
 POST /qwiz - create a qwiz
-"creator_password": String - required
-"qwiz": {
-	"name": String - required
-	"creator_id": i32 - required
-	"thumbnail_uri": String - optional
+creator_password: String - required
+qwiz: {
+	name: String - required
+	creator_id: i32 - required
+	thumbnail_uri: String - optional
 } - required
-"questions": Vector of {
-	"body": String - required,
-	"answer1": String - required,
-	"answer2": String - required,
-	"answer3": String - optional,
-	"answer4": String - optional,
-	"correct": 1 / 2 / 3 / 4 - required,
-	"embed_uri": String - optional,
+questions: Vector of {
+	body: String - required,
+	answer1: String - required,
+	answer2: String - required,
+	answer3: String - optional,
+	answer4: String - optional,
+	correct: 1 / 2 / 3 / 4 - required,
+	embed: {
+		data: String - required
+		media_type: MediaType - required
+	} - optional,
 } - required
 
 PATCH /qwiz/<id> - update qwiz data
-"creator_password": String - required
-"new_name": String - optional
-"new_thumbnail_uri": String - optional
+creator_password: String - required
+new_name: String - optional
+new_thumbnail: String - optional
 
 DELETE /qwiz/<id> - delete qwiz
-"creator_password": String - required
-
+creator_password: String - required
 "#
 }
 
@@ -66,7 +72,7 @@ struct GetQwizData {
 	id: i32,
 	name: String,
 	creator_id: i32,
-	thumbnail_uri: Option<String>,
+	thumbnail: Option<GetMediaData>,
 	questions: Vec<GetQuestionData>,
 }
 impl GetQwizData {
@@ -75,7 +81,7 @@ impl GetQwizData {
 
 		let mut questions: Vec<GetQuestionData> = Vec::new();
 		for question in Question::get_all_by_qwiz_id(&qwiz.id).await? {
-			questions.push(GetQuestionData::from_question(question).await?);
+			questions.push(GetQuestionData::from_question(question).await);
 		}
 
 		Ok(
@@ -83,8 +89,8 @@ impl GetQwizData {
 				id: qwiz.id,
 				name: qwiz.name,
 				creator_id: qwiz.creator_id,
-				thumbnail_uri: match qwiz.thumbnail_uuid {
-					Some(uuid) => Media::get_by_uuid(&uuid).await.ok().map(|m| m.uri),
+				thumbnail: match qwiz.thumbnail_uuid {
+					Some(uuid) => Media::get_by_uuid(&uuid).await.ok().map(Into::into),
 					None => None,
 				},
 				questions,
@@ -183,7 +189,7 @@ async fn create_qwiz(qwiz_data: Json<PostQwizData>) -> Result<Created<String>, S
 struct PatchQwizData {
 	creator_password: String,
 	new_name: Option<String>,
-	new_thumbnail_uri: Option<String>,
+	new_thumbnail: Option<NewMediaData>,
 }
 
 #[patch("/qwiz/<id>", data = "<new_qwiz_data>")]
@@ -194,7 +200,7 @@ async fn update_qwiz(id: i32, new_qwiz_data: Json<PatchQwizData>) -> Result<Stat
 		Err(e) => {
 
 			eprintln!("{e}");
-			return Err(Either::Left(Status::NotFound))
+			return Err(Left(Status::NotFound))
 			
 		},
 	};
@@ -204,7 +210,7 @@ async fn update_qwiz(id: i32, new_qwiz_data: Json<PatchQwizData>) -> Result<Stat
 		Err(e) => {
 
 			eprintln!("{e}");
-			return Err(Either::Left(Status::InternalServerError))
+			return Err(Left(Status::InternalServerError))
 			
 		},
 	};
@@ -214,24 +220,39 @@ async fn update_qwiz(id: i32, new_qwiz_data: Json<PatchQwizData>) -> Result<Stat
 
 			if let Some(new_name) = &new_qwiz_data.new_name {
 				if qwiz.update_name(new_name).await.is_err() {
-					return Err(Either::Right(BadRequest(Some("Bad name"))));
+					return Err(Right(BadRequest(Some("Bad name"))));
 				}
 			}
 
-			if let Some(new_thumbnail_uri) = &new_qwiz_data.new_thumbnail_uri {
-				if qwiz.update_thumbnail_uri(new_thumbnail_uri).await.is_err() {
-					return Err(Either::Right(BadRequest(Some("Bad thumbnail URI"))));
+			if let Some(new_thumbnail) = &new_qwiz_data.new_thumbnail {
+				use QwizError::*;
+
+				match qwiz.update_thumbnail(new_thumbnail).await {
+					Ok(_) => (),
+					Err(SqlxError(e)) => {
+						
+						eprintln!("{e}");
+						return Err(Left(Status::InternalServerError))
+
+					},
+					Err(Base64Error(_)) => return Err(Right(BadRequest(Some("Bad thumbnail base64")))),
+					Err(IOError(e)) => {
+						
+						eprintln!("{e}");
+						return Err(Left(Status::InternalServerError))
+
+					},
 				}
 			}
 
 			Ok(Status::Ok)
 
 		},
-		Ok(false) => Err(Either::Left(Status::Unauthorized)),
+		Ok(false) => Err(Left(Status::Unauthorized)),
 		Err(e) => {
 
 			eprintln!("{e}");
-			Err(Either::Left(Status::InternalServerError))
+			Err(Left(Status::InternalServerError))
 			
 		},
 	}

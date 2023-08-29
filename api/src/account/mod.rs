@@ -4,8 +4,8 @@ pub mod routes;
 
 use crate::POOL;
 use crate::crypto;
-use crate::media::Media;
-
+use crate::media::{Media, NewMediaData, MediaError};
+use std::fmt::Display;
 use serde::{Serialize, Deserialize};
 use sqlx::types::Uuid;
 
@@ -18,6 +18,45 @@ pub enum AccountType {
 	Parent,
 	Teacher,
 }
+
+
+
+pub enum AccountError {
+	SqlxError(sqlx::Error),
+	Base64Error(base64::DecodeError),
+	IOError(std::io::Error),
+}
+impl Display for AccountError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		
+		use AccountError::*;
+		
+		match self {
+			SqlxError(e) => e.fmt(f),
+			Base64Error(e) => e.fmt(f),
+			IOError(e) => e.fmt(f),
+		}
+
+	}
+}
+impl From<sqlx::Error> for AccountError {
+	fn from(value: sqlx::Error) -> Self {
+		Self::SqlxError(value)
+	}
+}
+impl From<MediaError> for AccountError {
+	fn from(value: MediaError) -> Self {
+		
+		match value {
+			MediaError::SqlxError(e) => AccountError::SqlxError(e),
+			MediaError::Base64Error(e) => AccountError::Base64Error(e),
+			MediaError::IOError(e) => AccountError::IOError(e),
+		}
+
+	}
+}
+
+
 
 #[derive(Serialize)]
 pub struct Account {
@@ -53,25 +92,26 @@ impl Account {
 	
 	}
 	
-	pub async fn new(username: &String, password: &String, account_type: &AccountType, profile_picture_uri: &Option<String>) -> Result<Self, sqlx::Error> {
+	pub async fn new(username: &String, password: &String, account_type: &AccountType, profile_picture: &Option<NewMediaData>) -> Result<Self, AccountError> {
 
 		let password_hash = crypto::encode_password(password);
-		let profile_picture_uuid = match profile_picture_uri {
-			Some(uri) => Some(Media::new(uri).await?.uuid),
+		let profile_picture_uuid = match profile_picture {
+			Some(data) => Some(Media::from_media_data(data).await?.uuid),
 			None => None
 		};
 
 		sqlx::query_as!(
 			Account,
 			r#"INSERT INTO account (username, password_hash, account_type, profile_picture_uuid)
-			VALUES ($1, $2, $3, $4) RETURNING id, username, password_hash, profile_picture_uuid, account_type AS "account_type!: AccountType""#,
+			VALUES ($1, $2, $3, $4) RETURNING id, username, password_hash, profile_picture_uuid, account_type AS "account_type!: _""#,
 			username,
 			password_hash,
-			account_type as &AccountType,
+			account_type as _,
 			profile_picture_uuid,
 		)
 		.fetch_one(POOL.get().await)
 		.await
+		.map_err(From::from)
 	
 	}
 
@@ -118,13 +158,13 @@ impl Account {
 		Ok(())
 
 	}
-	pub async fn update_profile_picture_url(&mut self, new_profile_picture_uri: &String) -> Result<(), sqlx::Error> {
+	pub async fn update_profile_picture(&mut self, new_profile_picture: &NewMediaData) -> Result<(), AccountError> {
 
 		match self.profile_picture_uuid {
-			Some(uuid) => Media::get_by_uuid(&uuid).await?.update(new_profile_picture_uri).await?,
+			Some(uuid) => Media::get_by_uuid(&uuid).await?.update(new_profile_picture).await?,
 			None => {
 				
-				let media = Media::new(new_profile_picture_uri).await?;
+				let media = Media::from_media_data(new_profile_picture).await?;
 				
 				sqlx::query!(
 					"UPDATE account SET profile_picture_uuid=$1 WHERE id=$2",

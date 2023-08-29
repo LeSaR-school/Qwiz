@@ -3,7 +3,8 @@ pub mod routes;
 
 
 use crate::POOL;
-use crate::media::Media;
+use crate::media::{Media, NewMediaData, MediaError};
+use std::fmt::Display;
 use serde::Deserialize;
 use sqlx::types::Uuid;
 
@@ -13,8 +14,58 @@ use sqlx::types::Uuid;
 pub struct NewQwizData {
 	pub name: String,
 	pub creator_id: i32,
-	pub thumbnail_uri: Option<String>
+	pub thumbnail: Option<NewMediaData>
 }
+
+
+
+pub enum QwizError {
+	SqlxError(sqlx::Error),
+	Base64Error(base64::DecodeError),
+	IOError(std::io::Error),
+}
+impl Display for QwizError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		
+		use QwizError::*;
+		
+		match self {
+			SqlxError(e) => e.fmt(f),
+			Base64Error(e) => e.fmt(f),
+			IOError(e) => e.fmt(f),
+		}
+
+	}
+}
+impl From<sqlx::Error> for QwizError {
+	fn from(value: sqlx::Error) -> Self {
+		Self::SqlxError(value)
+	}
+}
+impl From<base64::DecodeError> for QwizError {
+	fn from(value: base64::DecodeError) -> Self {
+		Self::Base64Error(value)
+	}
+}
+impl From<std::io::Error> for QwizError {
+	fn from(value: std::io::Error) -> Self {
+		Self::IOError(value)
+	}
+}
+impl From<MediaError> for QwizError {
+	fn from(value: MediaError) -> Self {
+		
+		match value {
+			MediaError::SqlxError(e) => QwizError::SqlxError(e),
+			MediaError::Base64Error(e) => QwizError::Base64Error(e),
+			MediaError::IOError(e) => QwizError::IOError(e),
+		}
+
+	}
+}
+
+
+
 
 pub struct Qwiz {
 	id: i32,
@@ -37,7 +88,7 @@ impl Qwiz {
 	
 	}
 
-	pub async fn from_qwiz_data(data: &NewQwizData) -> Result<Self, sqlx::Error> {
+	pub async fn from_qwiz_data(data: &NewQwizData) -> Result<Self, QwizError> {
 
 		// check if creator uuid exists
 		sqlx::query!(
@@ -47,8 +98,8 @@ impl Qwiz {
 		.fetch_one(POOL.get().await)
 		.await?;
 
-		let thumbnail_uuid = match &data.thumbnail_uri {
-			Some(uri) => Some(Media::new(uri).await?.uuid),
+		let thumbnail_uuid = match &data.thumbnail {
+			Some(data) => Some(Media::from_media_data(data).await?.uuid),
 			None => None,
 		};
 
@@ -61,6 +112,7 @@ impl Qwiz {
 		)
 		.fetch_one(POOL.get().await)
 		.await
+		.map_err(From::from)
 
 	}
 
@@ -91,13 +143,13 @@ impl Qwiz {
 		Ok(())
 
 	}
-	pub async fn update_thumbnail_uri(&mut self, new_thumbnail_uri: &String) -> Result<(), sqlx::Error> {
+	pub async fn update_thumbnail(&mut self, new_thumbnail: &NewMediaData) -> Result<(), QwizError> {
 
 		match self.thumbnail_uuid {
-			Some(uuid) => Media::get_by_uuid(&uuid).await?.update(new_thumbnail_uri).await?,
+			Some(uuid) => Media::get_by_uuid(&uuid).await?.update(new_thumbnail).await?,
 			None => {
 				
-				let media = Media::new(new_thumbnail_uri).await?;
+				let media = Media::from_media_data(new_thumbnail).await?;
 				
 				sqlx::query!(
 					"UPDATE qwiz SET thumbnail_uuid=$1 WHERE id=$2",
