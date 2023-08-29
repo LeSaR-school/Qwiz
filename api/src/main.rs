@@ -22,10 +22,9 @@ lazy_static! {
 
 	pub static ref POOL: AsyncOnce<Pool<Postgres>> = AsyncOnce::new(async {
 		
-		let connection_url = dotenv::var("DATABASE_URL").unwrap();
 		PgPoolOptions::new()
 			.connect_with(
-				PgConnectOptions::from_str(&connection_url).unwrap()
+				PgConnectOptions::from_str(env!("DATABASE_URL")).unwrap()
 				.disable_statement_logging().clone()
 			)
 			.await
