@@ -14,7 +14,8 @@ use sqlx::types::Uuid;
 pub struct NewQwizData {
 	pub name: String,
 	pub creator_id: i32,
-	pub thumbnail: Option<NewMediaData>
+	pub thumbnail: Option<NewMediaData>,
+	pub public: bool,
 }
 
 
@@ -66,12 +67,12 @@ impl From<MediaError> for QwizError {
 
 
 
-
 pub struct Qwiz {
 	id: i32,
 	name: String,
 	pub creator_id: i32,
 	thumbnail_uuid: Option<Uuid>,
+	public: bool,
 }
 
 impl Qwiz {
@@ -117,10 +118,11 @@ impl Qwiz {
 
 		sqlx::query_as!(
 			Qwiz,
-			"INSERT INTO qwiz (name, creator_id, thumbnail_uuid) VALUES ($1, $2, $3) RETURNING *",
+			"INSERT INTO qwiz (name, creator_id, thumbnail_uuid, public) VALUES ($1, $2, $3, $4) RETURNING *",
 			&data.name,
 			&data.creator_id,
 			thumbnail_uuid,
+			&data.public,
 		)
 		.fetch_one(POOL.get().await)
 		.await
@@ -179,5 +181,5 @@ impl Qwiz {
 		Ok(())
 
 	}
-	
+
 }

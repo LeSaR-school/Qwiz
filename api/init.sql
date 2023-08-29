@@ -58,6 +58,58 @@ CREATE TYPE public.media_type AS ENUM (
 ALTER TYPE public.media_type OWNER TO qwiz;
 
 --
+-- Name: check_student_func(); Type: FUNCTION; Schema: public; Owner: qwiz
+--
+
+CREATE FUNCTION public.check_student_func() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+
+declare
+type account_type;
+begin
+
+select account_type into type from account where id=NEW."student_id";
+if type!='student' then
+raise exception 'User with id % is not a student', NEW."student_id";
+end if;
+
+return NEW;
+
+end;
+
+$$;
+
+
+ALTER FUNCTION public.check_student_func() OWNER TO qwiz;
+
+--
+-- Name: check_teacher_func(); Type: FUNCTION; Schema: public; Owner: qwiz
+--
+
+CREATE FUNCTION public.check_teacher_func() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+
+declare
+type account_type;
+begin
+
+select account_type into type from account where id=NEW."teacher_id";
+if type!='teacher' then
+raise exception 'User with id % is not a teacher', NEW."teacher_id";
+end if;
+
+return NEW;
+
+end;
+
+$$;
+
+
+ALTER FUNCTION public.check_teacher_func() OWNER TO qwiz;
+
+--
 -- Name: delete_embed_func(); Type: FUNCTION; Schema: public; Owner: qwiz
 --
 
@@ -105,6 +157,31 @@ $$;
 
 ALTER FUNCTION public.delete_thumbnail_func() OWNER TO qwiz;
 
+--
+-- Name: update_account_type_func(); Type: FUNCTION; Schema: public; Owner: qwiz
+--
+
+CREATE FUNCTION public.update_account_type_func() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+
+begin
+
+if OLD."account_type"='teacher' AND NEW."account_type"!='teacher' then
+DELETE FROM class WHERE teacher_id=NEW."id";
+elsif OLD."account_type"='student' AND NEW."account_type"!='student' then
+DELETE FROM student WHERE student_id=NEW."id";
+end if;
+
+return null;
+
+end;
+
+$$;
+
+
+ALTER FUNCTION public.update_account_type_func() OWNER TO qwiz;
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -143,6 +220,40 @@ ALTER TABLE public.account_id_seq OWNER TO qwiz;
 --
 
 ALTER SEQUENCE public.account_id_seq OWNED BY public.account.id;
+
+
+--
+-- Name: class; Type: TABLE; Schema: public; Owner: qwiz
+--
+
+CREATE TABLE public.class (
+    id integer NOT NULL,
+    teacher_id integer NOT NULL
+);
+
+
+ALTER TABLE public.class OWNER TO qwiz;
+
+--
+-- Name: class_id_seq; Type: SEQUENCE; Schema: public; Owner: qwiz
+--
+
+CREATE SEQUENCE public.class_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.class_id_seq OWNER TO qwiz;
+
+--
+-- Name: class_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: qwiz
+--
+
+ALTER SEQUENCE public.class_id_seq OWNED BY public.class.id;
 
 
 --
@@ -188,7 +299,8 @@ CREATE TABLE public.qwiz (
     id integer NOT NULL,
     name character varying(100) NOT NULL,
     creator_id integer NOT NULL,
-    thumbnail_uuid uuid
+    thumbnail_uuid uuid,
+    public boolean DEFAULT true NOT NULL
 );
 
 
@@ -217,6 +329,18 @@ ALTER SEQUENCE public.qwiz_id_seq OWNED BY public.qwiz.id;
 
 
 --
+-- Name: student; Type: TABLE; Schema: public; Owner: qwiz
+--
+
+CREATE TABLE public.student (
+    student_id integer NOT NULL,
+    class_id integer NOT NULL
+);
+
+
+ALTER TABLE public.student OWNER TO qwiz;
+
+--
 -- Name: vote; Type: TABLE; Schema: public; Owner: qwiz
 --
 
@@ -233,6 +357,13 @@ ALTER TABLE public.vote OWNER TO qwiz;
 --
 
 ALTER TABLE ONLY public.account ALTER COLUMN id SET DEFAULT nextval('public.account_id_seq'::regclass);
+
+
+--
+-- Name: class id; Type: DEFAULT; Schema: public; Owner: qwiz
+--
+
+ALTER TABLE ONLY public.class ALTER COLUMN id SET DEFAULT nextval('public.class_id_seq'::regclass);
 
 
 --
@@ -256,6 +387,14 @@ ALTER TABLE ONLY public.account
 
 ALTER TABLE ONLY public.account
     ADD CONSTRAINT account_username_key UNIQUE (username);
+
+
+--
+-- Name: class class_pkey; Type: CONSTRAINT; Schema: public; Owner: qwiz
+--
+
+ALTER TABLE ONLY public.class
+    ADD CONSTRAINT class_pkey PRIMARY KEY (id);
 
 
 --
@@ -283,11 +422,33 @@ ALTER TABLE ONLY public.qwiz
 
 
 --
+-- Name: student student_pkey; Type: CONSTRAINT; Schema: public; Owner: qwiz
+--
+
+ALTER TABLE ONLY public.student
+    ADD CONSTRAINT student_pkey PRIMARY KEY (student_id, class_id);
+
+
+--
 -- Name: vote vote_pkey; Type: CONSTRAINT; Schema: public; Owner: qwiz
 --
 
 ALTER TABLE ONLY public.vote
     ADD CONSTRAINT vote_pkey PRIMARY KEY (voter_id, qwiz_id);
+
+
+--
+-- Name: student check_student; Type: TRIGGER; Schema: public; Owner: qwiz
+--
+
+CREATE TRIGGER check_student BEFORE INSERT OR UPDATE ON public.student FOR EACH ROW EXECUTE FUNCTION public.check_student_func();
+
+
+--
+-- Name: class check_teacher; Type: TRIGGER; Schema: public; Owner: qwiz
+--
+
+CREATE TRIGGER check_teacher BEFORE INSERT OR UPDATE ON public.class FOR EACH ROW EXECUTE FUNCTION public.check_teacher_func();
 
 
 --
@@ -312,11 +473,26 @@ CREATE TRIGGER delete_thumbnail AFTER DELETE ON public.qwiz FOR EACH ROW EXECUTE
 
 
 --
+-- Name: account update_account_type; Type: TRIGGER; Schema: public; Owner: qwiz
+--
+
+CREATE TRIGGER update_account_type AFTER UPDATE ON public.account FOR EACH ROW EXECUTE FUNCTION public.update_account_type_func();
+
+
+--
 -- Name: account account_profile_picture_uuid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: qwiz
 --
 
 ALTER TABLE ONLY public.account
     ADD CONSTRAINT account_profile_picture_uuid_fkey FOREIGN KEY (profile_picture_uuid) REFERENCES public.media(uuid) ON DELETE SET NULL;
+
+
+--
+-- Name: class class_teacher_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: qwiz
+--
+
+ALTER TABLE ONLY public.class
+    ADD CONSTRAINT class_teacher_id_fkey FOREIGN KEY (teacher_id) REFERENCES public.account(id) ON DELETE CASCADE;
 
 
 --
@@ -349,6 +525,22 @@ ALTER TABLE ONLY public.qwiz
 
 ALTER TABLE ONLY public.qwiz
     ADD CONSTRAINT qwiz_thumbnail_uuid_fkey FOREIGN KEY (thumbnail_uuid) REFERENCES public.media(uuid) ON DELETE SET NULL;
+
+
+--
+-- Name: student student_class_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: qwiz
+--
+
+ALTER TABLE ONLY public.student
+    ADD CONSTRAINT student_class_id_fkey FOREIGN KEY (class_id) REFERENCES public.class(id) ON DELETE CASCADE;
+
+
+--
+-- Name: student student_student_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: qwiz
+--
+
+ALTER TABLE ONLY public.student
+    ADD CONSTRAINT student_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.account(id) ON DELETE CASCADE;
 
 
 --

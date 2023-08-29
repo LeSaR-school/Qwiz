@@ -42,6 +42,7 @@ qwiz: {
 	name: String - required
 	creator_id: i32 - required
 	thumbnail_uri: String - optional
+	public: bool - optional
 } - required
 questions: Vector of {
 	body: String - required,
@@ -74,6 +75,7 @@ struct GetQwizData {
 	creator_id: i32,
 	thumbnail: Option<GetMediaData>,
 	questions: Vec<GetQuestionData>,
+	public: bool,
 }
 impl GetQwizData {
 
@@ -94,6 +96,7 @@ impl GetQwizData {
 					None => None,
 				},
 				questions,
+				public: qwiz.public,
 			}
 		)
 
