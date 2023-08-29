@@ -54,20 +54,37 @@ impl Question {
 			None => None
 		};
 
-		// shift all existing questions after current index by 1
-		sqlx::query!(
-			r#"UPDATE question SET index=index+1 WHERE index>=$1 AND qwiz_uuid=$2"#,
-			*index,
-			qwiz_uuid,
-		)
-		.execute(POOL.get().await)
-		.await?;
+		let real_index = match index {
+			Some(index) => {	
+				// shift all existing questions after current index by 1
+				sqlx::query!(
+					r#"UPDATE question SET index=index+1 WHERE index>=$1 AND qwiz_uuid=$2"#,
+					index,
+					qwiz_uuid,
+				)
+				.execute(POOL.get().await)
+				.await?;
 
-		let mut question = sqlx::query_as!(
+				*index
+			},
+			None => sqlx::query!(
+				"SELECT MAX(index) + 1 AS max FROM question WHERE qwiz_uuid=$1",
+				qwiz_uuid,
+			)
+			.fetch_one(POOL.get().await)
+			.await?
+			.max
+			.unwrap_or(0),
+		};
+
+
+
+		let question = sqlx::query_as!(
 			Question,
 			r#"INSERT INTO question (qwiz_uuid, index, body, answer1, answer2, answer3, answer4, correct, embed_uuid)
-			VALUES ($1, (SELECT MAX(index) FROM question WHERE qwiz_uuid=$1) + 1, $2, $3, $4, $5, $6, $7, $8) RETURNING *"#,
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *"#,
 			qwiz_uuid,
+			real_index,
 			body,
 			answer1,
 			answer2,
@@ -79,10 +96,6 @@ impl Question {
 		.fetch_one(POOL.get().await)
 		.await?;
 	
-		if let Some(i) = &index {
-			question.update_index(i).await?;
-		};
-
 		Ok(question)
 
 	}
