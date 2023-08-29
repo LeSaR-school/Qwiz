@@ -1,9 +1,9 @@
-﻿--
+--
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 15.2
--- Dumped by pg_dump version 15.2
+-- Dumped from database version 14.8 (Ubuntu 14.8-0ubuntu0.22.04.1)
+-- Dumped by pg_dump version 14.8 (Ubuntu 14.8-0ubuntu0.22.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -31,7 +31,7 @@ COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UU
 
 
 --
--- Name: account_type; Type: TYPE; Schema: public; Owner: postgres
+-- Name: account_type; Type: TYPE; Schema: public; Owner: qwiz
 --
 
 CREATE TYPE public.account_type AS ENUM (
@@ -41,10 +41,24 @@ CREATE TYPE public.account_type AS ENUM (
 );
 
 
-ALTER TYPE public.account_type OWNER TO postgres;
+ALTER TYPE public.account_type OWNER TO qwiz;
 
 --
--- Name: delete_embed_func(); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: media_type; Type: TYPE; Schema: public; Owner: qwiz
+--
+
+CREATE TYPE public.media_type AS ENUM (
+    'image',
+    'video',
+    'audio',
+    'youtube'
+);
+
+
+ALTER TYPE public.media_type OWNER TO qwiz;
+
+--
+-- Name: delete_embed_func(); Type: FUNCTION; Schema: public; Owner: qwiz
 --
 
 CREATE FUNCTION public.delete_embed_func() RETURNS trigger
@@ -57,10 +71,10 @@ end;
 $$;
 
 
-ALTER FUNCTION public.delete_embed_func() OWNER TO postgres;
+ALTER FUNCTION public.delete_embed_func() OWNER TO qwiz;
 
 --
--- Name: delete_profile_picture_func(); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: delete_profile_picture_func(); Type: FUNCTION; Schema: public; Owner: qwiz
 --
 
 CREATE FUNCTION public.delete_profile_picture_func() RETURNS trigger
@@ -73,10 +87,10 @@ end;
 $$;
 
 
-ALTER FUNCTION public.delete_profile_picture_func() OWNER TO postgres;
+ALTER FUNCTION public.delete_profile_picture_func() OWNER TO qwiz;
 
 --
--- Name: delete_thumbnail_func(); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: delete_thumbnail_func(); Type: FUNCTION; Schema: public; Owner: qwiz
 --
 
 CREATE FUNCTION public.delete_thumbnail_func() RETURNS trigger
@@ -89,14 +103,14 @@ end;
 $$;
 
 
-ALTER FUNCTION public.delete_thumbnail_func() OWNER TO postgres;
+ALTER FUNCTION public.delete_thumbnail_func() OWNER TO qwiz;
 
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
 
 --
--- Name: account; Type: TABLE; Schema: public; Owner: postgres
+-- Name: account; Type: TABLE; Schema: public; Owner: qwiz
 --
 
 CREATE TABLE public.account (
@@ -108,10 +122,10 @@ CREATE TABLE public.account (
 );
 
 
-ALTER TABLE public.account OWNER TO postgres;
+ALTER TABLE public.account OWNER TO qwiz;
 
 --
--- Name: account_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: account_id_seq; Type: SEQUENCE; Schema: public; Owner: qwiz
 --
 
 CREATE SEQUENCE public.account_id_seq
@@ -122,29 +136,30 @@ CREATE SEQUENCE public.account_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.account_id_seq OWNER TO postgres;
+ALTER TABLE public.account_id_seq OWNER TO qwiz;
 
 --
--- Name: account_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: account_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: qwiz
 --
 
 ALTER SEQUENCE public.account_id_seq OWNED BY public.account.id;
 
 
 --
--- Name: media; Type: TABLE; Schema: public; Owner: postgres
+-- Name: media; Type: TABLE; Schema: public; Owner: qwiz
 --
 
 CREATE TABLE public.media (
     uuid uuid DEFAULT public.uuid_generate_v4() NOT NULL,
-    path character varying NOT NULL
+    uri character varying NOT NULL,
+    media_type public.media_type NOT NULL
 );
 
 
-ALTER TABLE public.media OWNER TO postgres;
+ALTER TABLE public.media OWNER TO qwiz;
 
 --
--- Name: question; Type: TABLE; Schema: public; Owner: postgres
+-- Name: question; Type: TABLE; Schema: public; Owner: qwiz
 --
 
 CREATE TABLE public.question (
@@ -163,10 +178,10 @@ CREATE TABLE public.question (
 );
 
 
-ALTER TABLE public.question OWNER TO postgres;
+ALTER TABLE public.question OWNER TO qwiz;
 
 --
--- Name: qwiz; Type: TABLE; Schema: public; Owner: postgres
+-- Name: qwiz; Type: TABLE; Schema: public; Owner: qwiz
 --
 
 CREATE TABLE public.qwiz (
@@ -177,10 +192,10 @@ CREATE TABLE public.qwiz (
 );
 
 
-ALTER TABLE public.qwiz OWNER TO postgres;
+ALTER TABLE public.qwiz OWNER TO qwiz;
 
 --
--- Name: qwiz_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: qwiz_id_seq; Type: SEQUENCE; Schema: public; Owner: qwiz
 --
 
 CREATE SEQUENCE public.qwiz_id_seq
@@ -192,63 +207,31 @@ CREATE SEQUENCE public.qwiz_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.qwiz_id_seq OWNER TO postgres;
+ALTER TABLE public.qwiz_id_seq OWNER TO qwiz;
 
 --
--- Name: qwiz_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: qwiz_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: qwiz
 --
 
 ALTER SEQUENCE public.qwiz_id_seq OWNED BY public.qwiz.id;
 
 
 --
--- Name: account id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: account id; Type: DEFAULT; Schema: public; Owner: qwiz
 --
 
 ALTER TABLE ONLY public.account ALTER COLUMN id SET DEFAULT nextval('public.account_id_seq'::regclass);
 
 
 --
--- Name: qwiz id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: qwiz id; Type: DEFAULT; Schema: public; Owner: qwiz
 --
 
 ALTER TABLE ONLY public.qwiz ALTER COLUMN id SET DEFAULT nextval('public.qwiz_id_seq'::regclass);
 
 
 --
--- Data for Name: account; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
-COPY public.account (username, password_hash, profile_picture_uuid, account_type, id) FROM stdin;
-\.
-
-
---
--- Data for Name: media; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
-COPY public.media (uuid, path) FROM stdin;
-\.
-
-
---
--- Data for Name: question; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
-COPY public.question (qwiz_id, index, body, answer1, answer2, answer3, answer4, correct, embed_uuid) FROM stdin;
-\.
-
-
---
--- Data for Name: qwiz; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
-COPY public.qwiz (id, name, creator_id, thumbnail_uuid) FROM stdin;
-\.
-
-
---
--- Name: account account_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: account account_pkey; Type: CONSTRAINT; Schema: public; Owner: qwiz
 --
 
 ALTER TABLE ONLY public.account
@@ -256,7 +239,7 @@ ALTER TABLE ONLY public.account
 
 
 --
--- Name: account account_username_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: account account_username_key; Type: CONSTRAINT; Schema: public; Owner: qwiz
 --
 
 ALTER TABLE ONLY public.account
@@ -264,7 +247,7 @@ ALTER TABLE ONLY public.account
 
 
 --
--- Name: media media_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: media media_pkey; Type: CONSTRAINT; Schema: public; Owner: qwiz
 --
 
 ALTER TABLE ONLY public.media
@@ -272,7 +255,7 @@ ALTER TABLE ONLY public.media
 
 
 --
--- Name: question question_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: question question_pkey; Type: CONSTRAINT; Schema: public; Owner: qwiz
 --
 
 ALTER TABLE ONLY public.question
@@ -280,7 +263,7 @@ ALTER TABLE ONLY public.question
 
 
 --
--- Name: qwiz qwiz_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: qwiz qwiz_pkey; Type: CONSTRAINT; Schema: public; Owner: qwiz
 --
 
 ALTER TABLE ONLY public.qwiz
@@ -288,28 +271,28 @@ ALTER TABLE ONLY public.qwiz
 
 
 --
--- Name: question delete_embed; Type: TRIGGER; Schema: public; Owner: postgres
+-- Name: question delete_embed; Type: TRIGGER; Schema: public; Owner: qwiz
 --
 
 CREATE TRIGGER delete_embed AFTER DELETE ON public.question FOR EACH ROW EXECUTE FUNCTION public.delete_embed_func();
 
 
 --
--- Name: account delete_profile_picture; Type: TRIGGER; Schema: public; Owner: postgres
+-- Name: account delete_profile_picture; Type: TRIGGER; Schema: public; Owner: qwiz
 --
 
 CREATE TRIGGER delete_profile_picture AFTER DELETE ON public.account FOR EACH ROW EXECUTE FUNCTION public.delete_profile_picture_func();
 
 
 --
--- Name: qwiz delete_thumbnail; Type: TRIGGER; Schema: public; Owner: postgres
+-- Name: qwiz delete_thumbnail; Type: TRIGGER; Schema: public; Owner: qwiz
 --
 
 CREATE TRIGGER delete_thumbnail AFTER DELETE ON public.qwiz FOR EACH ROW EXECUTE FUNCTION public.delete_thumbnail_func();
 
 
 --
--- Name: account account_profile_picture_uuid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: account account_profile_picture_uuid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: qwiz
 --
 
 ALTER TABLE ONLY public.account
@@ -317,7 +300,7 @@ ALTER TABLE ONLY public.account
 
 
 --
--- Name: question question_embed_uuid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: question question_embed_uuid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: qwiz
 --
 
 ALTER TABLE ONLY public.question
@@ -325,7 +308,7 @@ ALTER TABLE ONLY public.question
 
 
 --
--- Name: question question_qwiz_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: question question_qwiz_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: qwiz
 --
 
 ALTER TABLE ONLY public.question
@@ -333,7 +316,7 @@ ALTER TABLE ONLY public.question
 
 
 --
--- Name: qwiz qwiz_creator_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: qwiz qwiz_creator_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: qwiz
 --
 
 ALTER TABLE ONLY public.qwiz
@@ -341,7 +324,7 @@ ALTER TABLE ONLY public.qwiz
 
 
 --
--- Name: qwiz qwiz_thumbnail_uuid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: qwiz qwiz_thumbnail_uuid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: qwiz
 --
 
 ALTER TABLE ONLY public.qwiz
@@ -349,38 +332,10 @@ ALTER TABLE ONLY public.qwiz
 
 
 --
--- Name: SCHEMA public; Type: ACL; Schema: -; Owner: pg_database_owner
+-- Name: SCHEMA public; Type: ACL; Schema: -; Owner: postgres
 --
 
-GRANT USAGE ON SCHEMA public TO qwiz;
-
-
---
--- Name: TABLE account; Type: ACL; Schema: public; Owner: postgres
---
-
-GRANT ALL ON TABLE public.account TO qwiz;
-
-
---
--- Name: TABLE media; Type: ACL; Schema: public; Owner: postgres
---
-
-GRANT ALL ON TABLE public.media TO qwiz;
-
-
---
--- Name: TABLE question; Type: ACL; Schema: public; Owner: postgres
---
-
-GRANT ALL ON TABLE public.question TO qwiz;
-
-
---
--- Name: TABLE qwiz; Type: ACL; Schema: public; Owner: postgres
---
-
-GRANT ALL ON TABLE public.qwiz TO qwiz;
+GRANT ALL ON SCHEMA public TO qwiz;
 
 
 --
