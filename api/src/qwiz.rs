@@ -1,6 +1,6 @@
 use sqlx::{types::Uuid, Pool, Postgres, postgres::PgQueryResult};
 
-struct Qwiz {
+pub struct Qwiz {
 	uuid: Uuid,
 	name: String,
 	creator_uuid: Uuid,
@@ -20,7 +20,7 @@ impl Qwiz {
 	
 	}
 
-	pub async fn create(name: String, creator_uuid: Uuid, thumbnail_url: Option<String>, pool: &Pool<Postgres>) -> Result<Self, sqlx::Error> {
+	pub async fn new(name: String, creator_uuid: Uuid, thumbnail_url: Option<String>, pool: &Pool<Postgres>) -> Result<Self, sqlx::Error> {
 
 		let thumbnail_uuid = match thumbnail_url {
 			Some(url) => Some(

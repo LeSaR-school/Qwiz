@@ -1,0 +1,77 @@
+@base_url = http://localhost:8000/api
+@password = password123
+@new_password = securepassword!@#
+
+# fill in after first post
+@uuid = 
+
+
+
+### create
+POST {{base_url}}/account
+Content-Type: application/json
+
+{
+	"username": "test acc",
+	"password": "{{password}}"
+}
+
+
+
+### get
+GET {{base_url}}/account/{{uuid}}
+
+
+
+### invalid patch - id
+PATCH {{base_url}}/account/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+	"old_password": "1",
+	"new_password": "2"
+}
+
+### invalid patch - password
+PATCH {{base_url}}/account/{{uuid}}
+Content-Type: application/json
+
+{
+	"old_password": "1",
+	"new_password": "2"
+}
+
+### valid patch
+PATCH {{base_url}}/account/{{uuid}}
+Content-Type: application/json
+
+{
+	"old_password": "{{password}}",
+	"new_password": "{{new_password}}"
+}
+
+
+
+### invalid delete - id
+DELETE {{base_url}}/account/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+	"password": "1"
+}
+
+### invalid delete - password
+DELETE {{base_url}}/account/{{uuid}}
+Content-Type: application/json
+
+{
+	"password": "1"
+}
+
+### valid delete
+DELETE {{base_url}}/account/{{uuid}}
+Content-Type: application/json
+
+{
+	"password": "{{new_password}}"
+}

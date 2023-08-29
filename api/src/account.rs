@@ -1,13 +1,16 @@
+use serde::Serialize;
 use sqlx::{types::Uuid, Pool, Postgres, postgres::PgQueryResult};
 
 use crate::crypto;
 
 
 
+#[derive(Serialize)]
 pub struct Account {
 	pub uuid: Uuid,
 	pub username: String,
 	pub password_hash: String,
+	pub profile_picture_uuid: Option<Uuid>,
 }
 
 impl Account {
@@ -23,7 +26,7 @@ impl Account {
 	
 	}
 
-	pub async fn create(username: String, password: String, pool: &Pool<Postgres>) -> Result<Self, sqlx::Error> {
+	pub async fn new(username: &String, password: &String, pool: &Pool<Postgres>) -> Result<Self, sqlx::Error> {
 
 		let password_hash = crypto::encode_password(password);
 		
@@ -47,7 +50,7 @@ impl Account {
 
 	}
 
-	pub async fn update_password(&mut self, new_password: String, pool: &Pool<Postgres>) -> Result<(), sqlx::Error> {
+	pub async fn update_password(&mut self, new_password: &String, pool: &Pool<Postgres>) -> Result<(), sqlx::Error> {
 
 		let password_hash = crypto::encode_password(new_password);
 
