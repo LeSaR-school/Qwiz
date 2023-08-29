@@ -122,23 +122,24 @@ impl Question {
 			Some(index) => {	
 				// shift all existing questions after current index by 1
 				sqlx::query!(
-					"UPDATE question SET index=index+1 WHERE index>=$1 AND qwiz_id=$2",
-					index,
+					"UPDATE question SET index=index+1 WHERE index>=$1 AND qwiz_id=$2 RETURNING index",
+					&index,
 					qwiz_id,
 				)
-				.execute(POOL.get().await)
-				.await?;
-
-				*index
+				.fetch_one(POOL.get().await)
+				.await?
+				.index
 			},
-			None => sqlx::query!(
-				"SELECT MAX(index) + 1 AS max FROM question WHERE qwiz_id=$1",
-				qwiz_id,
-			)
-			.fetch_one(POOL.get().await)
-			.await?
-			.max
-			.unwrap_or(0),
+			None => {
+				sqlx::query!(
+					"SELECT MAX(index) + 1 AS max FROM question WHERE qwiz_id=$1",
+					qwiz_id,
+				)
+				.fetch_one(POOL.get().await)
+				.await?
+				.max
+				.unwrap_or(0)
+			},
 		};
 
 
