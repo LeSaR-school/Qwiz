@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 
 
-#[derive(sqlx::Type, Debug, Serialize, Deserialize, Clone)]
+#[derive(sqlx::Type, Debug, Serialize, Deserialize, Clone, Copy)]
 #[sqlx(type_name = "media_type", rename_all = "lowercase")]
 pub enum MediaType {
 	Image,
@@ -203,14 +203,19 @@ impl Media {
 
 	pub async fn update(&mut self, new_data: &NewMediaData) -> Result<(), MediaError> {
 
+		let new_uri = new_data.get_uri().await?;
+
 		sqlx::query!(
 			"UPDATE media SET uri=$1, media_type=$2 WHERE uuid=$3",
-			new_data.get_uri().await?,
+			new_uri,
 			new_data.media_type as _,
 			self.uuid,
 		)
 		.execute(POOL.get().await)
 		.await?;
+
+		self.uri = new_uri;
+		self.media_type = new_data.media_type;
 
 		Ok(())
 	

@@ -14,7 +14,6 @@ pub fn all() -> Vec<Route> {
 	routes![
 		media_info,
 		get_media_by_uuid,
-		// post_media,
 	]
 
 }

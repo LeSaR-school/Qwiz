@@ -79,7 +79,7 @@ struct GetQwizData {
 }
 impl GetQwizData {
 
-	async fn from_qwiz(qwiz: Qwiz) -> Result<Self, sqlx::Error> {
+	async fn from_qwiz(qwiz: Qwiz) -> sqlx::Result<Self> {
 
 		let mut questions: Vec<GetQuestionData> = Vec::new();
 		for question in Question::get_all_by_qwiz_id(&qwiz.id).await? {

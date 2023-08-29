@@ -11,7 +11,7 @@ use sqlx::types::Uuid;
 
 
 
-#[derive(sqlx::Type, Debug, Serialize, Deserialize)]
+#[derive(sqlx::Type, Debug, Serialize, Deserialize, PartialEq)]
 #[sqlx(type_name = "account_type", rename_all = "lowercase")]
 pub enum AccountType {
 	Student,
@@ -69,6 +69,17 @@ pub struct Account {
 
 impl Account {
 
+	pub async fn exists(id: &i32) -> sqlx::Result<bool> {
+
+		sqlx::query!(
+			"SELECT EXISTS(SELECT * FROM account WHERE id=$1)",
+			id,
+		)
+		.fetch_one(POOL.get().await)
+		.await
+		.map(|r| r.exists.unwrap_or(false))
+
+	}
 	pub async fn get_by_id(id: &i32) -> sqlx::Result<Self> {
 
 		sqlx::query_as!(

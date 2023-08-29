@@ -2,6 +2,7 @@ mod account;
 mod qwiz;
 mod question;
 mod vote;
+mod class;
 mod media;
 mod crypto;
 
@@ -68,6 +69,7 @@ r#"
 /account
 /qwiz
 /question
+/vote
 /media
 "#
 }
