@@ -14,17 +14,5 @@
 ### info
 GET {{base_url}}
 
-### post media request
-POST {{base_url}}
-
-{
-	"username": "{{username}}",
-	"password": "{{password}}",
-	"media": {
-		"data": "{{b64}}",
-		"media_type": "Image"
-	}
-}
-
 ### get created media
 GET {{base_url}}/{{uuid}}
