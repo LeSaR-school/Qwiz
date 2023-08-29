@@ -21,7 +21,7 @@ pub enum AccountType {
 
 #[derive(Serialize)]
 pub struct Account {
-	pub uuid: Uuid,
+	pub id: i32,
 	pub username: String,
 	pub password_hash: String,
 	pub profile_picture_uuid: Option<Uuid>,
@@ -30,12 +30,12 @@ pub struct Account {
 
 impl Account {
 
-	pub async fn get_by_id(uuid: &Uuid) -> Result<Self, sqlx::Error> {
+	pub async fn get_by_id(id: &i32) -> Result<Self, sqlx::Error> {
 
 		sqlx::query_as!(
 			Account,
-			r#"SELECT uuid, username, password_hash, profile_picture_uuid, account_type AS "account_type!: AccountType" FROM account WHERE uuid=$1"#,
-			uuid,
+			r#"SELECT id, username, password_hash, profile_picture_uuid, account_type AS "account_type!: AccountType" FROM account WHERE id=$1"#,
+			id,
 		)
 		.fetch_one(POOL.get().await)
 		.await
@@ -45,7 +45,7 @@ impl Account {
 
 		sqlx::query_as!(
 			Account,
-			r#"SELECT uuid, username, password_hash, profile_picture_uuid, account_type AS "account_type!: AccountType" FROM account WHERE username=$1"#,
+			r#"SELECT id, username, password_hash, profile_picture_uuid, account_type AS "account_type!: AccountType" FROM account WHERE username=$1"#,
 			username,
 		)
 		.fetch_one(POOL.get().await)
@@ -64,7 +64,7 @@ impl Account {
 		sqlx::query_as!(
 			Account,
 			r#"INSERT INTO account (username, password_hash, account_type, profile_picture_uuid)
-			VALUES ($1, $2, $3, $4) RETURNING uuid, username, password_hash, profile_picture_uuid, account_type AS "account_type!: AccountType""#,
+			VALUES ($1, $2, $3, $4) RETURNING id, username, password_hash, profile_picture_uuid, account_type AS "account_type!: AccountType""#,
 			username,
 			password_hash,
 			account_type as &AccountType,
@@ -77,31 +77,9 @@ impl Account {
 
 	pub async fn delete(self) -> Result<(), sqlx::Error> {
 		
-		if let Some(uuid) = self.profile_picture_uuid {
-			media::delete(uuid).await?;
-		}
-
 		sqlx::query!(
-			"DELETE FROM account WHERE uuid=$1",
-			self.uuid,
-		)
-		.execute(POOL.get().await)
-		.await?;
-
-		sqlx::query!(
-			r#"WITH deleted_qwiz AS (
-				DELETE FROM qwiz WHERE creator_uuid=$1
-				RETURNING uuid, thumbnail_uuid
-			),
-			deleted_question AS (
-				DELETE FROM question WHERE qwiz_uuid IN (SELECT uuid FROM deleted_qwiz)
-				RETURNING embed_uuid
-			)
-			DELETE FROM media WHERE uuid IN (
-				SELECT thumbnail_uuid FROM deleted_qwiz UNION
-				SELECT embed_uuid FROM deleted_question
-			)"#,
-			self.uuid,
+			"DELETE FROM account WHERE id=$1",
+			self.id,
 		)
 		.execute(POOL.get().await)
 		.await?;
@@ -115,9 +93,9 @@ impl Account {
 		let password_hash = crypto::encode_password(new_password);
 
 		self.password_hash = sqlx::query!(
-			"UPDATE account SET password_hash=$1 WHERE uuid=$2 RETURNING password_hash",
+			"UPDATE account SET password_hash=$1 WHERE id=$2 RETURNING password_hash",
 			password_hash,
-			self.uuid
+			self.id
 		)
 		.fetch_one(POOL.get().await)
 		.await?
@@ -129,9 +107,9 @@ impl Account {
 	pub async fn update_account_type(&mut self, new_account_type: &AccountType) -> Result<(), sqlx::Error> {
 
 		self.account_type = sqlx::query!(
-			r#"UPDATE account SET account_type=$1 WHERE uuid=$2 RETURNING account_type AS "account_type!: AccountType""#,
+			r#"UPDATE account SET account_type=$1 WHERE id=$2 RETURNING account_type AS "account_type!: AccountType""#,
 			new_account_type as &AccountType,
-			self.uuid
+			self.id
 		)
 		.fetch_one(POOL.get().await)
 		.await?
@@ -145,9 +123,9 @@ impl Account {
 		media::update(&mut self.profile_picture_uuid, new_profile_picture_url).await?;
 		
 		sqlx::query!(
-			"UPDATE account SET profile_picture_uuid=$1 WHERE uuid=$2",
+			"UPDATE account SET profile_picture_uuid=$1 WHERE id=$2",
 			self.profile_picture_uuid,
-			self.uuid,
+			self.id,
 		)
 		.execute(POOL.get().await)
 		.await

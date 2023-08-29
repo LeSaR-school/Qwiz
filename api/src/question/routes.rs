@@ -8,7 +8,6 @@ use rocket::{Route, Either};
 use rocket::response::status::{Created, BadRequest};
 use rocket::{http::Status, serde::json::Json};
 use serde::{Serialize, Deserialize};
-use uuid::Uuid;
 
 
 
@@ -29,9 +28,9 @@ pub fn all() -> Vec<Route> {
 #[get("/question")]
 fn question_info() -> &'static str {
 r#"
-GET /question/<qwiz_uuid>/<index> - get question data by qwiz uuid and index
+GET /question/<qwiz_id>/<index> - get question data by qwiz id and index
 
-POST /question/<qwiz_uuid> - add a question to an existing qwiz
+POST /question/<qwiz_id> - add a question to an existing qwiz
 "creator_password": String - required
 "question": {
 	"body": String - required,
@@ -43,16 +42,17 @@ POST /question/<qwiz_uuid> - add a question to an existing qwiz
 	"embed_url": String - optional,
 } - required
 
-PATCH /question/<qwiz_uuid>/<index> - update question data
+PATCH /question/<qwiz_id>/<index> - update question data
 "creator_password": String - required
 "new_index": i32 - optional
 "new_body": String - optional
 "new answers": Vector of {
-	"index"
+	"index": 1 / 2 / 3 / 4 - required,
+	"new_answer": String - optional (null to delete)
 } - optional
 "new_embed_url": String - optional
 
-DELETE /question/<qwiz_uuid> - delete question
+DELETE /question/<qwiz_id> - delete question
 "creator_password": String - required
 
 "#
@@ -68,7 +68,7 @@ pub struct GetQuestionData {
 	asnwer2: String,
 	answer3: Option<String>,
 	answer4: Option<String>,
-	correct: i32,
+	correct: i16,
 	embed_url: Option<String>,
 }
 impl GetQuestionData {
@@ -93,10 +93,10 @@ impl GetQuestionData {
 
 }
 
-#[get("/question/<qwiz_uuid>/<index>")]
-async fn get_question_by_uuid_index(qwiz_uuid: Uuid, index: i32) -> Result<Json<GetQuestionData>, Status> {
+#[get("/question/<qwiz_id>/<index>")]
+async fn get_question_by_uuid_index(qwiz_id: i32, index: i32) -> Result<Json<GetQuestionData>, Status> {
 
-	match Question::get_by_qwiz_uuid_index(&qwiz_uuid, &index).await {
+	match Question::get_by_qwiz_id_index(&qwiz_id, &index).await {
 		Ok(question) => {
 			match GetQuestionData::from_question(question).await {
 				Ok(data) => Ok(Json(data)),
@@ -116,15 +116,15 @@ pub struct PostQuestionData {
 	pub question: NewQuestionData,
 }
 
-#[post("/question/<qwiz_uuid>", data = "<question_data>")]
-async fn create_question(qwiz_uuid: Uuid, question_data: Json<PostQuestionData>) -> Result<Created<String>, Status> {
+#[post("/question/<qwiz_id>", data = "<question_data>")]
+async fn create_question(qwiz_id: i32, question_data: Json<PostQuestionData>) -> Result<Created<String>, Status> {
 	
-	let qwiz = match Qwiz::get_by_uuid(&qwiz_uuid).await {
+	let qwiz = match Qwiz::get_by_id(&qwiz_id).await {
 		Ok(qwiz) => qwiz,
 		Err(_) => return Err(Status::NotFound),
 	};
 
-	let mut account = match Account::get_by_id(&qwiz.creator_uuid).await {
+	let mut account = match Account::get_by_id(&qwiz.creator_id).await {
 		Ok(acc) => acc,
 		Err(_) => return Err(Status::InternalServerError),
 	};
@@ -132,8 +132,8 @@ async fn create_question(qwiz_uuid: Uuid, question_data: Json<PostQuestionData>)
 	match verify_password(&question_data.creator_password, &mut account).await {
 		Ok(verified) => {
 			if verified {
-				match Question::from_question_data(&qwiz_uuid, &question_data.question).await {
-					Ok(question) => Ok(Created::new(format!("{}/question/{}/{}", BASE_URL, qwiz_uuid, question.index))),
+				match Question::from_question_data(&qwiz_id, &question_data.question).await {
+					Ok(question) => Ok(Created::new(format!("{}/question/{}/{}", BASE_URL, qwiz_id, question.index))),
 					Err(_) => Err(Status::BadRequest),
 				}
 			} else {
@@ -150,7 +150,7 @@ async fn create_question(qwiz_uuid: Uuid, question_data: Json<PostQuestionData>)
 #[derive(Deserialize)]
 struct NewAnswer {
 	index: u8,
-	content: String,
+	content: Option<String>,
 }
 #[derive(Deserialize)]
 struct PatchQuestionData {
@@ -158,22 +158,22 @@ struct PatchQuestionData {
 	new_index: Option<i32>,
 	new_body: Option<String>,
 	new_answers: Option<Vec<NewAnswer>>,
-	new_correct: Option<i32>,
+	new_correct: Option<i16>,
 	new_embed_url: Option<String>,
 }
 
-#[patch("/question/<qwiz_uuid>/<index>", data = "<new_question_data>")]
-async fn update_question(qwiz_uuid: Uuid, index: i32, new_question_data: Json<PatchQuestionData>) -> Result<Status, Either<Status, BadRequest<&'static str>>> {
+#[patch("/question/<qwiz_id>/<index>", data = "<new_question_data>")]
+async fn update_question(qwiz_id: i32, index: i32, new_question_data: Json<PatchQuestionData>) -> Result<Status, Either<Status, BadRequest<&'static str>>> {
 
-	match Question::get_by_qwiz_uuid_index(&qwiz_uuid, &index).await {
+	match Question::get_by_qwiz_id_index(&qwiz_id, &index).await {
 		Ok(mut question) => {
 
-			let qwiz = match Qwiz::get_by_uuid(&qwiz_uuid).await {
+			let qwiz = match Qwiz::get_by_id(&qwiz_id).await {
 				Ok(qwiz) => qwiz,
 				Err(_) => return Err(Either::Left(Status::NotFound)),
 			};
 		
-			let mut account = match Account::get_by_id(&qwiz.creator_uuid).await {
+			let mut account = match Account::get_by_id(&qwiz.creator_id).await {
 				Ok(acc) => acc,
 				Err(_) => return Err(Either::Left(Status::InternalServerError)),
 			};
@@ -236,18 +236,18 @@ struct DeleteQuestionData {
 	creator_password: String,
 }
 
-#[delete("/question/<qwiz_uuid>/<index>", data = "<delete_question_data>")]
-async fn delete_question(qwiz_uuid: Uuid, index: i32, delete_question_data: Json<DeleteQuestionData>) -> Status {
+#[delete("/question/<qwiz_id>/<index>", data = "<delete_question_data>")]
+async fn delete_question(qwiz_id: i32, index: i32, delete_question_data: Json<DeleteQuestionData>) -> Status {
 
-	match Question::get_by_qwiz_uuid_index(&qwiz_uuid, &index).await {
+	match Question::get_by_qwiz_id_index(&qwiz_id, &index).await {
 		Ok(question) => {
 			
-			let qwiz = match Qwiz::get_by_uuid(&qwiz_uuid).await {
+			let qwiz = match Qwiz::get_by_id(&qwiz_id).await {
 				Ok(qwiz) => qwiz,
 				Err(_) => return Status::NotFound,
 			};
 		
-			let mut account = match Account::get_by_id(&qwiz.creator_uuid).await {
+			let mut account = match Account::get_by_id(&qwiz.creator_id).await {
 				Ok(acc) => acc,
 				Err(_) => return Status::InternalServerError,
 			};

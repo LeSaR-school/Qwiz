@@ -82,15 +82,3 @@ pub async fn update(uuid: &mut Option<Uuid>, new_url: &String) -> Result<(), sql
 	Ok(())
 
 }
-
-pub async fn delete(uuid: Uuid) -> Result<String, sqlx::Error> {
-
-	sqlx::query!(
-		"DELETE FROM media WHERE uuid=$1 RETURNING path",
-		uuid
-	)
-	.fetch_one(POOL.get().await)
-	.await
-	.map(|r| r.path)
-
-}

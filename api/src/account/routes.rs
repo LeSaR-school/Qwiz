@@ -13,7 +13,7 @@ pub fn all() -> Vec<Route> {
 
 	routes![
 		account_info,
-		get_account_by_uuid,
+		get_account_by_id,
 		get_account_by_username,
 		create_account,
 		update_account,
@@ -29,7 +29,7 @@ fn account_info() -> &'static str {
 r#"
 enum AccountType { "Student", "Parent", "Teacher" }
 
-GET /account/<uuid> - get account data by uuid
+GET /account/<id> - get account data by id
 GET /account/<username> - get account data by username
 
 POST /account - create an account
@@ -38,15 +38,14 @@ POST /account - create an account
 "account_type": AccountType - required
 "profile_picture_url": String - optional
 
-PATCH /account/<uuid> - update account data
+PATCH /account/<id> - update account data
 "password": String - required
 "new_password": String - optional
 "new_account_type": AccountType - optional
 "new_profile_picture_url": String - optional
 
-DELETE /account/<uuid> - delete account
+DELETE /account/<id> - delete account
 "password": String - required
-
 "#
 }
 
@@ -54,7 +53,7 @@ DELETE /account/<uuid> - delete account
 
 #[derive(Serialize)]
 struct GetAccountData {
-	uuid: Uuid,
+	id: i32,
 	username: String,
 	profile_picture_uuid: Option<Uuid>,
 	account_type: AccountType,
@@ -63,7 +62,7 @@ impl GetAccountData {
 
 	fn from_account(account: Account) -> Self {
 		Self {
-			uuid: account.uuid,
+			id: account.id,
 			username: account.username,
 			profile_picture_uuid: account.profile_picture_uuid,
 			account_type: account.account_type
@@ -73,7 +72,7 @@ impl GetAccountData {
 }
 
 #[get("/account/<id>", rank = 1)]
-async fn get_account_by_uuid(id: Uuid) -> Result<Json<GetAccountData>, Status> {
+async fn get_account_by_id(id: i32) -> Result<Json<GetAccountData>, Status> {
 
 	match Account::get_by_id(&id).await {
 		Ok(account) => Ok(Json(GetAccountData::from_account(account))),
@@ -106,7 +105,7 @@ struct PostAccountData {
 async fn create_account(account_data: Json<PostAccountData>) -> Result<Created<String>, Status> {
 
 	match Account::new(&account_data.username, &account_data.password, &account_data.account_type, &account_data.profile_picture_url).await {
-		Ok(account) => Ok(Created::new(format!("{}/account/{}", BASE_URL, account.uuid.to_string()))),
+		Ok(account) => Ok(Created::new(format!("{}/account/{}", BASE_URL, account.id.to_string()))),
 		Err(_) => Err(Status::Conflict),
 	}
 
@@ -123,7 +122,7 @@ struct PatchAccountData {
 }
 
 #[patch("/account/<id>", data = "<new_account_data>")]
-async fn update_account(id: Uuid, new_account_data: Json<PatchAccountData>) -> Result<Status, Either<Status, BadRequest<&'static str>>> {
+async fn update_account(id: i32, new_account_data: Json<PatchAccountData>) -> Result<Status, Either<Status, BadRequest<&'static str>>> {
 
 	match Account::get_by_id(&id).await {
 		Ok(mut account) => {
@@ -171,7 +170,7 @@ struct DeleteAccountData {
 }
 
 #[delete("/account/<id>", data = "<delete_account_data>")]
-async fn delete_account(id: Uuid, delete_account_data: Json<DeleteAccountData>) -> Status {
+async fn delete_account(id: i32, delete_account_data: Json<DeleteAccountData>) -> Status {
 
 	match Account::get_by_id(&id).await {
 		Ok(mut account) => {
