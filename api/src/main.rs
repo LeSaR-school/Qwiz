@@ -13,6 +13,7 @@ mod crypto;
 
 
 
+use crate::account::Account;
 use std::str::FromStr;
 use rocket::{http::Status, Request, fs::{FileServer, relative}};
 use sqlx::{Pool, Postgres, postgres::{PgPoolOptions, PgConnectOptions}, ConnectOptions};
@@ -40,7 +41,9 @@ lazy_static! {
 
 
 #[launch]
-fn rocket() -> _ {
+async fn rocket() -> _ {
+
+	Account::load_cache().await.unwrap();
 
 	let mut routes = routes![root_info];
 	routes.append(&mut account::routes::all());

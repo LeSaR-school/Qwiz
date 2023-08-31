@@ -12,7 +12,6 @@ pub fn all() -> Vec<Route> {
 	routes![
 		class_info,
 		get_class_by_id,
-		get_classes_by_teacher_id,
 		create_class,
 		delete_class,
 		add_students,
@@ -27,16 +26,15 @@ fn class_info() -> &'static str {
 r#"
 GET /class/<id> - get class by id
 
-GET /classes/<id> - get classes by teacher id
-
 POST /class - create a new class
 teacher_password: String - required
 class: {
 	teacher_id: i32 - required
+	name: String - required
 	student_ids: Vec<i32> - optional
 }
 
-POST /class/<id> - add students to a class
+PUT /class/<id> - add students to a class
 teacher_password: String - required
 student_ids: Vec<i32> - required
 
@@ -46,7 +44,6 @@ teacher_password: String - required
 DELETE /class/<id> - remove students from class
 teacher_password: String - required
 student_ids: Vec<i32> - required
-
 "#
 
 }
@@ -54,19 +51,21 @@ student_ids: Vec<i32> - required
 
 
 #[derive(Serialize)]
-struct GetClassData {
+pub struct GetClassData {
 	id: i32,
 	teacher_id: i32,
+	name: String,
 	student_ids: Vec<i32>,
 }
 impl GetClassData {
 
-	async fn from_class(class: Class) -> sqlx::Result<Self> {
+	pub async fn from_class(class: Class) -> sqlx::Result<Self> {
 		Ok(
 			Self {
 				id: class.id,
 				teacher_id: class.teacher_id,
 				student_ids: class.get_all_students().await?,
+				name: class.name,
 			}
 		)
 	}
@@ -95,51 +94,13 @@ async fn get_class_by_id(id: i32) -> Result<Json<GetClassData>, Status> {
 
 
 
-#[get("/classes/<teacher_id>")]
-async fn get_classes_by_teacher_id(teacher_id: i32) -> Result<Json<Vec<GetClassData>>, Either<Status, BadRequest<String>>> {
-
-	use ClassError::*;
-
-	match Class::get_all_by_teacher_id(&teacher_id).await {
-		Ok(classes) => {
-			
-			let mut class_datas: Vec<GetClassData> = Vec::new();
-
-			for class in classes {
-				match GetClassData::from_class(class).await {
-					Ok(data) => class_datas.push(data),
-					Err(e) => {
-
-						eprintln!("{e}");
-						return Err(Left(Status::InternalServerError))
-
-					},
-				}
-			}
-
-			Ok(Json(class_datas))
-
-		},
-		Err(Sqlx(e)) => {
-
-			eprintln!("{e}");
-			Err(Left(Status::InternalServerError))
-
-		},
-		Err(e) => Err(Right(BadRequest(Some(e.to_string())))),
-	}
-
-}
-
-
-
 #[derive(Deserialize)]
 struct PostClassData {
 	teacher_password: String,
 	class: NewClassData,
 }
 
-#[post("/class", data="<class_data>")]
+#[post("/class", data = "<class_data>")]
 async fn create_class(class_data: Json<PostClassData>) -> Result<Created<String>, Either<Status, BadRequest<String>>> {
 
 	use ClassError::*;
@@ -192,7 +153,7 @@ struct PutClassData {
 	student_ids: Vec<i32>,
 }
 
-#[put("/class/<id>", data="<put_class_data>")]
+#[put("/class/<id>", data = "<put_class_data>")]
 async fn add_students(id: i32, put_class_data: Json<PutClassData>) -> Either<Status, BadRequest<String>> {
 
 	use ClassError::*;
@@ -251,7 +212,7 @@ struct DeleteClassData {
 	student_ids: Option<Vec<i32>>,
 }
 
-#[delete("/class/<id>", data="<delete_class_data>")]
+#[delete("/class/<id>", data = "<delete_class_data>")]
 async fn delete_class(id: i32, delete_class_data: Json<DeleteClassData>) -> Either<Status, BadRequest<String>> {
 
 	let class = match Class::get_by_id(&id).await {

@@ -6,6 +6,7 @@ use crate::POOL;
 use crate::crypto;
 use crate::media::{Media, NewMediaData, MediaError};
 use std::fmt::Display;
+use tokio::sync::Mutex;
 use serde::{Serialize, Deserialize};
 use sqlx::types::Uuid;
 
@@ -56,6 +57,52 @@ impl From<MediaError> for AccountError {
 	}
 }
 
+pub enum NewAccountError {
+	Base(AccountError),
+	InvalidUsername,
+	InvalidPassword,
+	UsernameTaken,
+}
+impl From<AccountError> for NewAccountError {
+	fn from(value: AccountError) -> Self {
+		Self::Base(value)
+	}
+}
+impl From<sqlx::Error> for NewAccountError {
+	fn from(value: sqlx::Error) -> Self {
+		Self::Base(AccountError::Sqlx(value))
+	}
+}
+impl From<MediaError> for NewAccountError {
+	fn from(value: MediaError) -> Self {
+		Self::Base(AccountError::from(value))
+	}
+}
+impl ToString for NewAccountError {
+	fn to_string(&self) -> String {
+
+		use NewAccountError::*;
+		use AccountError::*;
+
+		match self {
+			Base(Sqlx(e)) => e.to_string(),
+			Base(IO(e)) => e.to_string(),
+			Base(Base64(_)) => "invalid base64".to_owned(),
+			InvalidUsername => "invalid username".to_owned(),
+			InvalidPassword => "invalid password".to_owned(),
+			UsernameTaken => "username is taken".to_owned(),
+		}
+
+	}
+}
+
+
+
+lazy_static! {
+	static ref IDS: Mutex<Vec<i32>> = Mutex::new(vec![]);
+	static ref USERNAMES: Mutex<Vec<String>> = Mutex::new(vec![]);
+}
+
 
 
 #[derive(Serialize)]
@@ -69,17 +116,61 @@ pub struct Account {
 
 impl Account {
 
-	pub async fn exists(id: &i32) -> sqlx::Result<bool> {
+	pub async fn load_cache() -> sqlx::Result<()> {
 
-		sqlx::query!(
-			"SELECT EXISTS(SELECT * FROM account WHERE id=$1)",
-			id,
+		let (db_ids, db_usernames): (Vec<i32>, Vec<String>) = sqlx::query!(
+			"SELECT id, username FROM account"
 		)
-		.fetch_one(POOL.get().await)
-		.await
-		.map(|r| r.exists.unwrap_or(false))
+		.fetch_all(POOL.get().await)
+		.await?
+		.into_iter()
+		.map(|r| (r.id, r.username))
+		.unzip();
+
+		println!("Loaded ids and usernames:\n{db_ids:?}\n{db_usernames:?}");
+	
+		*IDS.lock().await = db_ids;
+		*USERNAMES.lock().await = db_usernames;
+
+		Ok(())
 
 	}
+
+	async fn cache_id(id: &i32) {
+
+		IDS.lock().await.push(*id)
+
+	}
+	async fn uncache_id(id: &i32) {
+
+		IDS.lock().await.retain(|i| i != id)
+
+	}
+
+	async fn cache_username(username: &String) {
+
+		USERNAMES.lock().await.push(username.to_owned())
+
+	}
+	async fn uncache_username(username: &String) {
+
+		USERNAMES.lock().await.retain(|u| u != username)
+
+	}
+
+
+
+	pub async fn exists_id(id: &i32) -> bool {
+
+		IDS.lock().await.contains(id)
+
+	}
+	pub async fn exists_username(username: &String) -> bool {
+
+		USERNAMES.lock().await.contains(username)
+
+	}
+	
 	pub async fn get_by_id(id: &i32) -> sqlx::Result<Self> {
 
 		sqlx::query_as!(
@@ -103,7 +194,21 @@ impl Account {
 	
 	}
 	
-	pub async fn new(username: &String, password: &String, account_type: &AccountType, profile_picture: &Option<NewMediaData>) -> Result<Self, AccountError> {
+	pub async fn new(username: &String, password: &String, account_type: &AccountType, profile_picture: &Option<NewMediaData>) -> Result<Self, NewAccountError> {
+
+		// TODO: username and password filter
+		// if () {
+		// 	return Err(NewAccountError::InvalidUsername);
+		// }
+		// if () {
+		// 	return Err(NewAccountError::InvalidPassword)
+		// }
+
+		if Self::exists_username(username).await {
+			return Err(NewAccountError::UsernameTaken)
+		}
+
+
 
 		let password_hash = crypto::encode_password(password);
 		let profile_picture_uuid = match profile_picture {
@@ -111,7 +216,7 @@ impl Account {
 			None => None
 		};
 
-		sqlx::query_as!(
+		let account = sqlx::query_as!(
 			Account,
 			r#"INSERT INTO account (username, password_hash, account_type, profile_picture_uuid)
 			VALUES ($1, $2, $3, $4) RETURNING id, username, password_hash, profile_picture_uuid, account_type AS "account_type!: _""#,
@@ -121,22 +226,13 @@ impl Account {
 			profile_picture_uuid,
 		)
 		.fetch_one(POOL.get().await)
-		.await
-		.map_err(From::from)
-	
-	}
-
-	pub async fn delete(self) -> sqlx::Result<()> {
-		
-		sqlx::query!(
-			"DELETE FROM account WHERE id=$1",
-			self.id,
-		)
-		.execute(POOL.get().await)
 		.await?;
 
-		Ok(())
+		Self::cache_id(&account.id).await;
+		Self::cache_username(&account.username).await;
 
+		Ok(account)
+	
 	}
 
 	pub async fn update_password(&mut self, new_password: &String) -> sqlx::Result<()> {
@@ -193,6 +289,24 @@ impl Account {
 		Ok(())
 
 	}
+
+	pub async fn delete(self) -> sqlx::Result<()> {
+		
+		sqlx::query!(
+			"DELETE FROM account WHERE id=$1",
+			&self.id,
+		)
+		.execute(POOL.get().await)
+		.await?;
+
+		Self::uncache_id(&self.id).await;
+		Self::uncache_username(&self.username).await;
+
+		Ok(())
+
+	}
+
+
 
 	pub async fn verify_password(&mut self, password: &String) -> Result<bool, sqlx::Error> {
 

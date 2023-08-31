@@ -10,6 +10,7 @@ use serde::Deserialize;
 #[derive(Deserialize)]
 pub struct NewClassData {
 	pub teacher_id: i32,
+	pub name: String,
 	pub student_ids: Option<Vec<i32>>,
 }
 
@@ -46,6 +47,7 @@ impl ToString for ClassError {
 pub struct Class {
 	pub id: i32,
 	pub teacher_id: i32,
+	pub name: String,
 }
 
 impl Class {
@@ -63,12 +65,13 @@ impl Class {
 	}
 	pub async fn get_all_by_teacher_id(teacher_id: &i32) -> Result<Vec<Self>, ClassError> {
 
-		if !Account::exists(teacher_id).await? {
-			return Err(ClassError::AccountNotFound(*teacher_id))
-		}
-
-		if Account::get_by_id(teacher_id).await?.account_type != AccountType::Teacher {
-			return Err(ClassError::NotATeacher(*teacher_id))
+		match Account::get_by_id(teacher_id).await {
+			Ok(account) => {
+				if account.account_type != AccountType::Teacher {
+					return Err(ClassError::NotATeacher(*teacher_id))
+				}
+			},
+			Err(_) => return Err(ClassError::AccountNotFound(*teacher_id))
 		}
 
 		sqlx::query_as!(
@@ -80,14 +83,34 @@ impl Class {
 		.await
 		.map_err(From::from)
 		
+	}
+	pub async fn get_all_by_student_id(student_id: &i32) -> Result<Vec<Self>, ClassError> {
+		
+		match Account::get_by_id(student_id).await {
+			Ok(account) => {
+				if account.account_type != AccountType::Student {
+					return Err(ClassError::NotAStudent(*student_id))
+				}
+			},
+			Err(_) => return Err(ClassError::AccountNotFound(*student_id))
+		}
 
+		sqlx::query_as!(
+			Class,
+			"SELECT * FROM class WHERE id IN (SELECT class_id FROM student WHERE student_id=$1)",
+			student_id,
+		)
+		.fetch_all(POOL.get().await)
+		.await
+		.map_err(From::from)
+		
 	}
 
 	pub async fn from_class_data(data: &NewClassData) -> Result<Self, ClassError> {
 
 		use ClassError::*;
 
-		if !Account::exists(&data.teacher_id).await? {
+		if !Account::exists_id(&data.teacher_id).await {
 			return Err(AccountNotFound(data.teacher_id))
 		}
 
@@ -97,8 +120,9 @@ impl Class {
 
 		let class = sqlx::query_as!(
 			Class,
-			"INSERT INTO class (teacher_id) VALUES ($1) RETURNING *",
+			"INSERT INTO class (teacher_id, name) VALUES ($1, $2) RETURNING *",
 			&data.teacher_id,
+			&data.name,
 		)
 		.fetch_one(POOL.get().await)
 		.await?;

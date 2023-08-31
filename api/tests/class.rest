@@ -1,0 +1,54 @@
+# these are test requests for /api/class
+
+@base_url = http://localhost:8000/api/class
+@account_url = http://localhost:8000/api/account
+
+@teacher_id = 5
+@teacher_password = password1234
+
+@student_id = 3
+@student_password = password123
+
+@id = 5
+
+
+
+### get info
+GET {{base_url}}
+
+### create a class
+POST {{base_url}}
+
+{
+	"teacher_password": "{{teacher_password}}",
+	"class": {
+		"teacher_id": {{teacher_id}}
+	}
+}
+
+### get created class
+GET {{base_url}}/{{id}}
+
+### add student to class
+PUT {{base_url}}/{{id}}
+
+{
+	"teacher_password": "{{teacher_password}}",
+	"student_ids": [
+		{{student_id}}
+	]
+}
+
+### get teacher classes
+GET {{account_url}}/{{teacher_id}}/classes
+
+{
+	"password": "{{teacher_password}}"
+}
+
+### get student classes
+GET {{account_url}}/{{student_id}}/classes
+
+{
+	"password": "{{student_password}}"
+}

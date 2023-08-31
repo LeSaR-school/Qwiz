@@ -1,0 +1,99 @@
+# these are test requests for /api/account
+
+@base_url = http://localhost:8000/api/account
+
+@username = test acc 2
+@password = password1234
+
+@account_type = Teacher
+
+# fill in after first post
+@id = 5
+
+
+
+### info
+GET {{base_url}}
+
+### create
+POST {{base_url}}
+
+{
+	"username": "{{username}}",
+	"password": "{{password}}",
+	"account_type": "{{account_type}}"
+}
+
+
+
+### get by id
+GET {{base_url}}/{{id}}
+
+### invalid get by id
+GET {{base_url}}/-1
+
+### get by username
+GET {{base_url}}/{{username}}
+
+### invalid get classes - password
+GET {{base_url}}/{{id}}/classes
+
+{
+	"password": "not_the_password"
+}
+
+### get classes
+GET {{base_url}}/{{id}}/classes
+
+{
+	"password": "{{password}}"
+}
+
+
+
+### invalid patch - id
+PATCH {{base_url}}/-1
+
+{
+	"password": "1",
+	"new_password": "2"
+}
+
+### invalid patch - password
+PATCH {{base_url}}/{{id}}
+
+{
+	"password": "1",
+	"new_password": "2"
+}
+
+### invalid account type patch
+PATCH {{base_url}}/{{id}}
+
+{
+	"password": "{{password}}",
+	"new_account_type": "lol"
+}
+
+
+
+### invalid delete - id
+DELETE {{base_url}}/-1
+
+{
+	"password": "1"
+}
+
+### invalid delete - password
+DELETE {{base_url}}/{{id}}
+
+{
+	"password": "1"
+}
+
+### valid delete
+DELETE {{base_url}}/{{id}}
+
+{
+	"password": "{{password}}"
+}
