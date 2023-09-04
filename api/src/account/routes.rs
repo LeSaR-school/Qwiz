@@ -1,6 +1,5 @@
 use crate::BASE_URL;
 use crate::account::{Account, AccountType, AccountError, NewAccountError};
-use crate::class::{Class, ClassError, routes::GetClassData};
 use crate::media::{Media, NewMediaData, routes::GetMediaData};
 use rocket::response::status::{BadRequest, Created};
 use rocket::{Route, Either::{self, *}};
@@ -18,7 +17,6 @@ pub fn all() -> Vec<Route> {
 		create_account,
 		update_account,
 		delete_account,
-		get_account_classes,
 	]
 
 }
@@ -279,97 +277,5 @@ async fn delete_account(id: i32, delete_account_data: Json<DeleteAccountData>) -
 			
 		},
 	}
-
-}
-
-
-
-#[derive(Deserialize)]
-struct GetClassesData {
-	password: String,
-}
-
-#[get("/account/<id>/classes", data = "<classes_data>")]
-async fn get_account_classes(id: i32, classes_data: Json<GetClassesData>) -> Result<Json<Vec<GetClassData>>, Either<Status, BadRequest<String>>> {
-
-	use ClassError::*;
-
-	let mut account = match Account::get_by_id(&id).await {
-		Ok(acc) => acc,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Err(Left(Status::NotFound))
-			
-		},
-	};
-
-	match account.verify_password(&classes_data.password).await {
-		Ok(true) => (),
-		Ok(false) => return Err(Left(Status::Unauthorized)),
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Err(Left(Status::InternalServerError))
-			
-		},
-	}
-
-
-
-	let classes = match Class::get_all_by_student_id(&id).await {
-		Ok(classes) => classes,
-		Err(NotAStudent(_)) => {
-					
-			match Class::get_all_by_teacher_id(&id).await {
-				Ok(classes) => classes,
-				Err(Sqlx(e)) => {
-
-					eprintln!("{e}");
-					return Err(Left(Status::InternalServerError))
-
-				},
-				Err(NotAStudent(id)) => {
-					return Err(Right(BadRequest(Some(format!("Account with id {id} is neither a teacher nor a student")))))
-				},
-				Err(e) => {
-			
-					eprintln!("unreachable, {}", e.to_string());
-					return Err(Left(Status::InternalServerError))
-		
-				},
-			}
-
-		},
-		Err(Sqlx(e)) => {
-
-			eprintln!("{e}");
-			return Err(Left(Status::InternalServerError))
-
-		},
-		Err(AccountNotFound(_)) => return Err(Left(Status::NotFound)),
-		Err(NotATeacher(id)) => {
-			
-			eprintln!("unreachable, {id}");
-			return Err(Left(Status::InternalServerError))
-
-		},
-	};
-
-	let mut class_datas: Vec<GetClassData> = Vec::new();
-
-	for class in classes {
-		match GetClassData::from_class(class).await {
-			Ok(data) => class_datas.push(data),
-			Err(e) => {
-
-				eprintln!("{e}");
-				return Err(Left(Status::InternalServerError))
-
-			}
-		}
-	}
-
-	Ok(Json(class_datas))
 
 }
