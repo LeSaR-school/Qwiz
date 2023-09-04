@@ -194,8 +194,17 @@ async fn update_account(id: i32, new_account_data: Json<PatchAccountData>) -> Re
 	}
 	
 	if let Some(new_password) = &new_account_data.new_password {
-		if account.update_password(new_password).await.is_err() {
-			return Err(Right(BadRequest(Some("Bad password"))));
+		match account.update_password(new_password).await {
+			Ok(true) => (),
+			Ok(false) => {
+				return Err(Right(BadRequest(Some("Bad password"))))
+			},
+			Err(e) => {
+
+				eprintln!("{e}");
+				return Err(Left(Status::InternalServerError))
+
+			},
 		}
 	}
 	

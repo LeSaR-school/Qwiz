@@ -3,7 +3,7 @@
 @base_url = http://localhost:8000/api/account
 
 @username = test acc
-@password = password123
+@password = Password123!
 @new_password = securepassword!@#
 
 @account_type = Student

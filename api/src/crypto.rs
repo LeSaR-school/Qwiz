@@ -45,3 +45,41 @@ pub async fn verify_password(password: &String, password_hash: &String) -> Resul
 	Ok(false)
 	
 }
+
+pub fn validate_password(password: &String) -> bool {
+
+	if password.len() < 8 {
+		return false
+	}
+
+	if !password.is_ascii() {
+		return false
+	}
+
+	if password.as_bytes().iter().any(|c| *c < 33 || *c > 126) {
+		return false
+	}
+
+	// no uppercase letters
+	if &password.to_ascii_lowercase() == password {
+		return false
+	}
+
+	// no lowercase letters
+	if &password.to_ascii_uppercase() == password {
+		return false
+	}
+
+	// no numbers
+	if !password.as_bytes().iter().any(|c| *c >= 48 && *c < 58) {
+		return false
+	}
+
+	// no special characters
+	if !password.as_bytes().iter().any(|c| *c <= 47 || (*c >= 58 && *c <= 64) || (*c >= 91 && *c <= 96) || *c >= 123) {
+		return false
+	}
+
+	true
+
+}
