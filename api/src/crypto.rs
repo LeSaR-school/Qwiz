@@ -83,3 +83,21 @@ pub fn validate_password(password: &String) -> bool {
 	true
 
 }
+
+pub fn validate_username(username: &String) -> bool {
+
+	if username.len() < 3 {
+		return false
+	}
+
+	if !username.is_ascii() {
+		return false
+	}
+
+	if !username.as_bytes().iter().all(|c| (*c >= 48 && *c < 58) || (*c >= 65 && *c <= 90) || (*c >= 97 && *c <= 122) || *c == 95) {
+		return false
+	}
+
+	true
+
+}

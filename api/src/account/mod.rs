@@ -196,10 +196,9 @@ impl Account {
 	
 	pub async fn new(username: &String, password: &String, account_type: &AccountType, profile_picture: &Option<NewMediaData>) -> Result<Self, NewAccountError> {
 
-		// TODO: username filter
-		// if () {
-		// 	return Err(NewAccountError::InvalidUsername);
-		// }
+		if !crypto::validate_username(username) {
+			return Err(NewAccountError::InvalidUsername);
+		}
 		if !crypto::validate_password(password) {
 			return Err(NewAccountError::InvalidPassword)
 		}

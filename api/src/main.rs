@@ -73,6 +73,7 @@ r#"
 /account
 /qwiz
 /question
+/class
 /vote
 /media
 "#
