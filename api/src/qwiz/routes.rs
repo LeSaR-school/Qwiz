@@ -22,6 +22,7 @@ pub fn all() -> Vec<Route> {
 	routes![
 		qwiz_info,
 		get_qwiz_by_id,
+		get_best,
 		create_qwiz,
 		update_qwiz,
 		delete_qwiz,
@@ -35,6 +36,8 @@ pub fn all() -> Vec<Route> {
 fn qwiz_info() -> &'static str {
 r#"
 GET /qwiz/<id> - get qwiz data by id
+
+GET /qwiz/best?<page> - get 50 best qwizes rated by votes
 
 POST /qwiz - create a qwiz
 creator_password: String - required
@@ -68,8 +71,9 @@ creator_password: String - required
 }
 
 
+
 #[derive(Serialize)]
-struct GetQwizData {
+struct GetFullQwizData {
 	id: i32,
 	name: String,
 	creator_id: i32,
@@ -77,7 +81,7 @@ struct GetQwizData {
 	questions: Vec<GetQuestionData>,
 	public: bool,
 }
-impl GetQwizData {
+impl GetFullQwizData {
 
 	async fn from_qwiz(qwiz: Qwiz) -> sqlx::Result<Self> {
 
@@ -105,11 +109,11 @@ impl GetQwizData {
 }
 
 #[get("/qwiz/<id>")]
-async fn get_qwiz_by_id(id: i32) -> Result<Json<GetQwizData>, Status> {
+async fn get_qwiz_by_id(id: i32) -> Result<Json<GetFullQwizData>, Status> {
 
 	match Qwiz::get_by_id(&id).await {
 		Ok(qwiz) => {
-			match GetQwizData::from_qwiz(qwiz).await {
+			match GetFullQwizData::from_qwiz(qwiz).await {
 				Ok(data) => Ok(Json(data)),
 				Err(e) => {
 
@@ -124,6 +128,48 @@ async fn get_qwiz_by_id(id: i32) -> Result<Json<GetQwizData>, Status> {
 			eprintln!("{e}");
 			Err(Status::NotFound)
 			
+		},
+	}
+
+}
+
+
+
+#[derive(Serialize)]
+pub struct GetShortQwizData {
+	pub id: i32,
+	pub name: String,
+	pub thumbnail_uri: Option<String>,
+	pub votes: Option<i64>,
+	pub creator_name: Option<String>,
+	pub creator_profile_picture_uri: Option<String>,
+}
+
+#[get("/qwiz/best?<page>&<search>")]
+async fn get_best(page: Option<u32>, search: Option<String>) -> Result<Json<Vec<GetShortQwizData>>, Status> {
+
+	match search {
+		Some(s) => {
+			match Qwiz::get_by_name(&s, page.unwrap_or(0) as i64).await {
+				Ok(datas) => Ok(Json(datas)),
+				Err(e) => {
+
+					eprintln!("{e}");
+					Err(Status::InternalServerError)
+
+				},
+			}
+		},
+		None => {
+			match Qwiz::get_best(page.unwrap_or(0) as i64).await {
+				Ok(datas) => Ok(Json(datas)),
+				Err(e) => {
+
+					eprintln!("{e}");
+					Err(Status::InternalServerError)
+
+				},
+			}
 		},
 	}
 

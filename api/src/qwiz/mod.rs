@@ -3,6 +3,7 @@ pub mod routes;
 
 
 use crate::POOL;
+use crate::qwiz::routes::GetShortQwizData;
 use crate::media::{Media, NewMediaData, MediaError};
 use std::fmt::Display;
 use serde::Deserialize;
@@ -180,6 +181,43 @@ impl Qwiz {
 
 		Ok(())
 
+	}
+
+
+
+	pub async fn get_best(page: i64) -> sqlx::Result<Vec<GetShortQwizData>> {
+
+		sqlx::query_as!(
+			GetShortQwizData,
+			r#"SELECT id, name,
+			(SELECT uri FROM media WHERE uuid=thumbnail_uuid) AS thumbnail_uri,
+			(SELECT COUNT(*) FROM vote WHERE qwiz_id=id) AS votes,
+			(SELECT username FROM account WHERE id=creator_id) AS creator_name,
+			(SELECT uri FROM media WHERE uuid=(SELECT profile_picture_uuid FROM account WHERE id=creator_id)) as creator_profile_picture_uri
+			FROM qwiz
+			ORDER BY votes LIMIT 50 OFFSET $1"#,
+			page * 50,
+		)
+		.fetch_all(POOL.get().await)
+		.await
+
+	}
+
+	pub async fn get_by_name(name: &String, page: i64) -> sqlx::Result<Vec<GetShortQwizData>> {
+		sqlx::query_as!(
+			GetShortQwizData,
+			r#"SELECT id, name,
+			(SELECT uri FROM media WHERE uuid=thumbnail_uuid) AS thumbnail_uri,
+			(SELECT COUNT(*) FROM vote WHERE qwiz_id=id) AS votes,
+			(SELECT username FROM account WHERE id=creator_id) AS creator_name,
+			(SELECT uri FROM media WHERE uuid=(SELECT profile_picture_uuid FROM account WHERE id=creator_id)) as creator_profile_picture_uri
+			FROM qwiz WHERE name LIKE $1
+			ORDER BY votes LIMIT 50 OFFSET $2"#,
+			format!("{name}%"),
+			page * 50,
+		)
+		.fetch_all(POOL.get().await)
+		.await
 	}
 
 }
