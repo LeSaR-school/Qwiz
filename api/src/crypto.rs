@@ -24,7 +24,7 @@ pub fn encode_password(password: &String) -> String {
 
 }
 
-pub async fn verify_password(password: &String, password_hash: &String) -> Result<bool, sqlx::Error> {
+pub async fn verify_password(password: &String, password_hash: &String) -> sqlx::Result<bool> {
 
 	let mut hasher = Sha512::new();
 	hasher.update(password);

@@ -268,7 +268,7 @@ impl Account {
 		Ok(())
 
 	}
-	pub async fn update_profile_picture(&mut self, new_profile_picture: &NewMediaData) -> Result<(), AccountError> {
+	pub async fn update_profile_picture(&mut self, new_profile_picture: &NewMediaData) -> Result<(), MediaError> {
 
 		match self.profile_picture_uuid {
 			Some(uuid) => Media::get_by_uuid(&uuid).await?.update(new_profile_picture).await?,
@@ -311,7 +311,7 @@ impl Account {
 
 
 
-	pub async fn verify_password(&mut self, password: &String) -> Result<bool, sqlx::Error> {
+	pub async fn verify_password(&mut self, password: &String) -> sqlx::Result<bool, sqlx::Error> {
 
 		match crypto::verify_password(password, &self.password_hash).await {
 			Ok(true) => self.update_password(password).await.map(|_| true),

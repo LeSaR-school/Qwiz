@@ -1,4 +1,4 @@
-use crate::BASE_URL;
+use crate::{BASE_URL, internal_err, db_err_to_status};
 use crate::account::Account;
 use crate::class::{Class, NewClassData, ClassError};
 
@@ -80,15 +80,10 @@ async fn get_class_by_id(id: i32) -> Result<Json<GetClassData>, Status> {
 		Ok(class) => {
 			match GetClassData::from_class(class).await {
 				Ok(data) => Ok(Json(data)),
-				Err(e) => {
-
-					eprintln!("{e}");
-					Err(Status::InternalServerError)
-
-				},
+				Err(e) => Err(internal_err(&e)),
 			}
 		},
-		Err(_) => Err(Status::NotFound),
+		Err(e) => Err(db_err_to_status(&e, Status::NotFound)),
 	}
 
 }
@@ -108,39 +103,20 @@ async fn create_class(class_data: Json<PostClassData>) -> Result<Created<String>
 
 	let mut account = match Account::get_by_id(&class_data.class.teacher_id).await {
 		Ok(acc) => acc,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Err(Left(Status::InternalServerError))
-			
-		},
+		Err(e) => return Err(Left(internal_err(&e))),
 	};
 
 	match account.verify_password(&class_data.teacher_password).await {
 		Ok(true) => (),
 		Ok(false) => return Err(Left(Status::Unauthorized)),
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Err(Left(Status::InternalServerError))
-			
-		},
+		Err(e) => return Err(Left(internal_err(&e))),
 	}
 
 
 
 	match Class::from_class_data(&class_data.class).await {
-		Ok(class) => {
-
-			Ok(Created::new(format!("{BASE_URL}/class/{}", class.id)))
-
-		},
-		Err(Sqlx(e)) => {
-
-			eprintln!("{e}");
-			Err(Left(Status::InternalServerError))
-
-		},
+		Ok(class) => Ok(Created::new(format!("{BASE_URL}/class/{}", class.id))),
+		Err(Sqlx(e)) => Err(Left(internal_err(&e))),
 		Err(e) => Err(Right(BadRequest(Some(e.to_string())))),
 	}
 
@@ -161,45 +137,25 @@ async fn add_students(id: i32, put_class_data: Json<PutClassData>) -> Either<Sta
 
 	let class = match Class::get_by_id(&id).await {
 		Ok(class) => class,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Left(Status::InternalServerError)
-
-		},
+		Err(e) => return Left(db_err_to_status(&e, Status::NotFound)),
 	};
 	
 	let mut account = match Account::get_by_id(&class.teacher_id).await {
 		Ok(acc) => acc,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Left(Status::InternalServerError)
-			
-		},
+		Err(e) => return Left(internal_err(&e)),
 	};
 
 	match account.verify_password(&put_class_data.teacher_password).await {
 		Ok(true) => (),
 		Ok(false) => return Left(Status::Unauthorized),
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Left(Status::InternalServerError)
-			
-		},
+		Err(e) => return Left(internal_err(&e)),
 	}
 	
 
 
 	match class.add_students(&put_class_data.student_ids).await {
 		Ok(_) => Left(Status::Ok),
-		Err(Sqlx(e)) => {
-
-			eprintln!("{e}");
-			Left(Status::InternalServerError)
-
-		},
+		Err(Sqlx(e)) => Left(internal_err(&e)),
 		Err(e) => Right(BadRequest(Some(e.to_string()))),
 	}
 
@@ -218,33 +174,18 @@ async fn delete_class(id: i32, delete_class_data: Json<DeleteClassData>) -> Eith
 
 	let class = match Class::get_by_id(&id).await {
 		Ok(class) => class,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Left(Status::InternalServerError)
-
-		},
+		Err(e) => return Left(db_err_to_status(&e, Status::NotFound)),
 	};
 
 	let mut account = match Account::get_by_id(&class.teacher_id).await {
 		Ok(acc) => acc,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Left(Status::InternalServerError)
-			
-		},
+		Err(e) => return Left(internal_err(&e)),
 	};
 
 	match account.verify_password(&delete_class_data.teacher_password).await {
 		Ok(true) => (),
 		Ok(false) => return Left(Status::Unauthorized),
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Left(Status::InternalServerError)
-			
-		},
+		Err(e) => return Left(internal_err(&e)),
 	}
 
 
@@ -253,24 +194,14 @@ async fn delete_class(id: i32, delete_class_data: Json<DeleteClassData>) -> Eith
 
 		match class.remove_students(student_ids).await {
 			Ok(_) => Left(Status::Ok),
-			Err(e) => {
-
-				eprintln!("{e}");
-				Left(Status::InternalServerError)
-
-			},
+			Err(e) => Left(internal_err(&e)),
 		}
 
 	} else {
 
 		match class.delete().await {
 			Ok(_) => Left(Status::Ok),
-			Err(e) => {
-
-				eprintln!("{e}");
-				Left(Status::InternalServerError)
-
-			},
+			Err(e) => Left(internal_err(&e)),
 		}
 
 	}
@@ -292,23 +223,13 @@ async fn get_account_classes(id: i32, classes_data: Json<GetClassesData>) -> Res
 
 	let mut account = match Account::get_by_id(&id).await {
 		Ok(acc) => acc,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Err(Left(Status::NotFound))
-			
-		},
+		Err(e) => return Err(Left(db_err_to_status(&e, Status::NotFound))),
 	};
 
 	match account.verify_password(&classes_data.password).await {
 		Ok(true) => (),
 		Ok(false) => return Err(Left(Status::Unauthorized)),
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Err(Left(Status::InternalServerError))
-			
-		},
+		Err(e) => return Err(Left(internal_err(&e))),
 	}
 
 
@@ -319,15 +240,8 @@ async fn get_account_classes(id: i32, classes_data: Json<GetClassesData>) -> Res
 					
 			match Class::get_all_by_teacher_id(&id).await {
 				Ok(classes) => classes,
-				Err(Sqlx(e)) => {
-
-					eprintln!("{e}");
-					return Err(Left(Status::InternalServerError))
-
-				},
-				Err(NotAStudent(id)) => {
-					return Err(Right(BadRequest(Some(format!("Account with id {id} is neither a teacher nor a student")))))
-				},
+				Err(Sqlx(e)) => return Err(Left(internal_err(&e))),
+				Err(NotAStudent(id)) => return Err(Right(BadRequest(Some(format!("Account with id {id} is neither a teacher nor a student"))))),
 				Err(e) => {
 			
 					eprintln!("unreachable, {}", e.to_string());
@@ -337,12 +251,7 @@ async fn get_account_classes(id: i32, classes_data: Json<GetClassesData>) -> Res
 			}
 
 		},
-		Err(Sqlx(e)) => {
-
-			eprintln!("{e}");
-			return Err(Left(Status::InternalServerError))
-
-		},
+		Err(Sqlx(e)) => return Err(Left(internal_err(&e))),
 		Err(AccountNotFound(_)) => return Err(Left(Status::NotFound)),
 		Err(NotATeacher(id)) => {
 			
@@ -357,12 +266,7 @@ async fn get_account_classes(id: i32, classes_data: Json<GetClassesData>) -> Res
 	for class in classes {
 		match GetClassData::from_class(class).await {
 			Ok(data) => class_datas.push(data),
-			Err(e) => {
-
-				eprintln!("{e}");
-				return Err(Left(Status::InternalServerError))
-
-			}
+			Err(e) => return Err(Left(internal_err(&e))),
 		}
 	}
 

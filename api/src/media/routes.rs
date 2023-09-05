@@ -1,4 +1,4 @@
-use crate::media::{Media, MediaType};
+use crate::{media::{Media, MediaType}, db_err_to_status};
 use rocket::{
 	Route,
 	http::Status,
@@ -51,12 +51,7 @@ async fn get_media_by_uuid(uuid: Uuid) -> Result<Json<GetMediaData>, Status> {
 
 	match Media::get_by_uuid(&uuid).await {
 		Ok(media) => Ok(Json(media.into())),
-		Err(e) => {
-			
-			eprintln!("{e}");
-			Err(Status::NotFound)
-			
-		},
+		Err(e) => Err(db_err_to_status(&e, Status::NotFound)),
 	}
 
 }

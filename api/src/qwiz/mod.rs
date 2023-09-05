@@ -54,17 +54,17 @@ impl From<std::io::Error> for QwizError {
 		Self::IO(value)
 	}
 }
-impl From<MediaError> for QwizError {
-	fn from(value: MediaError) -> Self {
+// impl From<MediaError> for QwizError {
+// 	fn from(value: MediaError) -> Self {
 		
-		match value {
-			MediaError::Sqlx(e) => QwizError::Sqlx(e),
-			MediaError::Base64(e) => QwizError::Base64(e),
-			MediaError::IO(e) => QwizError::IO(e),
-		}
+// 		match value {
+// 			MediaError::Sqlx(e) => QwizError::Sqlx(e),
+// 			MediaError::Base64(e) => QwizError::Base64(e),
+// 			MediaError::IO(e) => QwizError::IO(e),
+// 		}
 
-	}
-}
+// 	}
+// }
 
 
 
@@ -102,7 +102,7 @@ impl Qwiz {
 	
 	}
 
-	pub async fn from_qwiz_data(data: &NewQwizData) -> Result<Self, QwizError> {
+	pub async fn from_qwiz_data(data: &NewQwizData) -> Result<Self, MediaError> {
 
 		// check if creator uuid exists
 		sqlx::query!(
@@ -158,7 +158,7 @@ impl Qwiz {
 		Ok(())
 
 	}
-	pub async fn update_thumbnail(&mut self, new_thumbnail: &NewMediaData) -> Result<(), QwizError> {
+	pub async fn update_thumbnail(&mut self, new_thumbnail: &NewMediaData) -> Result<(), MediaError> {
 
 		match self.thumbnail_uuid {
 			Some(uuid) => Media::get_by_uuid(&uuid).await?.update(new_thumbnail).await?,

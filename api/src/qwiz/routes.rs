@@ -1,8 +1,8 @@
-use crate::BASE_URL;
+use crate::{BASE_URL, internal_err, db_err_to_status};
 use crate::account::Account;
-use crate::qwiz::{Qwiz, QwizError};
-use crate::question::{Question, NewQuestionData, routes::GetQuestionData};
-use crate::media::{Media, NewMediaData, routes::GetMediaData};
+use crate::qwiz::Qwiz;
+use crate::question::{Question, NewQuestionData, routes::GetQuestionData, QuestionError};
+use crate::media::{Media, NewMediaData, routes::GetMediaData, MediaError};
 
 use rocket::{
 	http::Status,
@@ -115,20 +115,10 @@ async fn get_qwiz_by_id(id: i32) -> Result<Json<GetFullQwizData>, Status> {
 		Ok(qwiz) => {
 			match GetFullQwizData::from_qwiz(qwiz).await {
 				Ok(data) => Ok(Json(data)),
-				Err(e) => {
-
-					eprintln!("{e}");
-					Err(Status::InternalServerError)
-					
-				},
+				Err(e) => Err(internal_err(&e)),
 			}
 		},
-		Err(e) => {
-
-			eprintln!("{e}");
-			Err(Status::NotFound)
-			
-		},
+		Err(e) => Err(db_err_to_status(&e, Status::NotFound)),
 	}
 
 }
@@ -152,23 +142,13 @@ async fn get_best(page: Option<u32>, search: Option<String>) -> Result<Json<Vec<
 		Some(s) => {
 			match Qwiz::get_by_name(&s, page.unwrap_or(0) as i64).await {
 				Ok(datas) => Ok(Json(datas)),
-				Err(e) => {
-
-					eprintln!("{e}");
-					Err(Status::InternalServerError)
-
-				},
+				Err(e) => Err(db_err_to_status(&e, Status::BadRequest)),
 			}
 		},
 		None => {
 			match Qwiz::get_best(page.unwrap_or(0) as i64).await {
 				Ok(datas) => Ok(Json(datas)),
-				Err(e) => {
-
-					eprintln!("{e}");
-					Err(Status::InternalServerError)
-
-				},
+				Err(e) => Err(db_err_to_status(&e, Status::BadRequest)),
 			}
 		},
 	}
@@ -185,47 +165,44 @@ struct PostQwizData {
 }
 
 #[post("/qwiz", data = "<qwiz_data>")]
-async fn create_qwiz(qwiz_data: Json<PostQwizData>) -> Result<Created<String>, Status> {
-	
+async fn create_qwiz(qwiz_data: Json<PostQwizData>) -> Result<Created<String>, Either<Status, BadRequest<&'static str>>> {
+
+	use MediaError::*;
+
 	let mut account = match Account::get_by_id(&qwiz_data.qwiz.creator_id).await {
 		Ok(acc) => acc,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Err(Status::Unauthorized)
-			
-		},
+		Err(_) => return Err(Left(Status::Unauthorized)),
 	};
 
 	match account.verify_password(&qwiz_data.creator_password).await {
 		Ok(true) => (),
-		Ok(false) => return Err(Status::Unauthorized),
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Err(Status::InternalServerError)
-			
-		},
+		Ok(false) => return Err(Left(Status::Unauthorized)),
+		Err(e) => return Err(Left(internal_err(&e))),
 	}
 
 
 
 	let qwiz = match Qwiz::from_qwiz_data(&qwiz_data.qwiz).await {
-		Ok(qwiz) => qwiz,
-		Err(e) => {
 
-			eprintln!("{e}");
-			return Err(Status::BadRequest)
-			
-		},
+		Ok(qwiz) => qwiz,
+		Err(Sqlx(e)) => return Err(Left(db_err_to_status(&e, Status::BadRequest))),
+		Err(Base64(_)) => return Err(Right(BadRequest(Some("Bad thumbnail base64")))),
+		Err(IO(e)) => return Err(Left(internal_err(&e))),
+
 	};
 
-	if Question::from_question_datas(&qwiz.id, &qwiz_data.questions).await.is_err() {
+	if let Err(e) = Question::from_question_datas(&qwiz.id, &qwiz_data.questions).await {
 
-		if qwiz.delete().await.is_err() {
-			return Err(Status::InternalServerError);
+		use QuestionError::*;
+
+		if let Err(e) = qwiz.delete().await {
+			return Err(Left(internal_err(&e)));
 		}
-		return Err(Status::BadRequest);
+		match e {
+			Sqlx(e) => return Err(Left(db_err_to_status(&e, Status::BadRequest))),
+			Base64(_) => return Err(Right(BadRequest(Some("Bad media base64")))),
+			IO(e) => return Err(Left(internal_err(&e))),
+		}
 
 	}
 
@@ -245,35 +222,22 @@ struct PatchQwizData {
 #[patch("/qwiz/<id>", data = "<new_qwiz_data>")]
 async fn update_qwiz(id: i32, new_qwiz_data: Json<PatchQwizData>) -> Result<Status, Either<Status, BadRequest<&'static str>>> {
 
+	use MediaError::*;
+
 	let mut qwiz = match Qwiz::get_by_id(&id).await {
 		Ok(q) => q,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Err(Left(Status::NotFound))
-			
-		},
+		Err(e) => return Err(Left(db_err_to_status(&e, Status::NotFound))),
 	};
 
 	let mut account = match Account::get_by_id(&qwiz.creator_id).await {
 		Ok(acc) => acc,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Err(Left(Status::InternalServerError))
-			
-		},
+		Err(e) => return Err(Left(internal_err(&e))),
 	};
 
 	match account.verify_password(&new_qwiz_data.creator_password).await {
 		Ok(true) => (),
 		Ok(false) => return Err(Left(Status::Unauthorized)),
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Err(Left(Status::InternalServerError))
-			
-		},
+		Err(e) => return Err(Left(internal_err(&e))),
 	}
 
 
@@ -285,23 +249,11 @@ async fn update_qwiz(id: i32, new_qwiz_data: Json<PatchQwizData>) -> Result<Stat
 	}
 
 	if let Some(new_thumbnail) = &new_qwiz_data.new_thumbnail {
-		use QwizError::*;
-
 		match qwiz.update_thumbnail(new_thumbnail).await {
 			Ok(_) => (),
-			Err(Sqlx(e)) => {
-				
-				eprintln!("{e}");
-				return Err(Left(Status::InternalServerError))
-
-			},
+			Err(Sqlx(e)) => return Err(Left(internal_err(&e))),
 			Err(Base64(_)) => return Err(Right(BadRequest(Some("Bad thumbnail base64")))),
-			Err(IO(e)) => {
-				
-				eprintln!("{e}");
-				return Err(Left(Status::InternalServerError))
-
-			},
+			Err(IO(e)) => return Err(Left(internal_err(&e))),
 		}
 	}
 
@@ -321,45 +273,25 @@ async fn delete_qwiz(id: i32, delete_qwiz_data: Json<DeleteQwizData>) -> Status 
 
 	let qwiz = match Qwiz::get_by_id(&id).await {
 		Ok(qwiz) => qwiz,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Status::NotFound
-			
-		},
+		Err(e) => return db_err_to_status(&e, Status::NotFound),
 	};
 
 	let mut account = match Account::get_by_id(&qwiz.creator_id).await {
 		Ok(acc) => acc,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Status::InternalServerError
-			
-		},
+		Err(e) => return internal_err(&e),
 	};
 
 	match account.verify_password(&delete_qwiz_data.creator_password).await {
 		Ok(true) => (),
 		Ok(false) => return Status::Unauthorized,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Status::InternalServerError
-			
-		},
+		Err(e) => return internal_err(&e),
 	}
 
 
 
 	match qwiz.delete().await {
 		Ok(_) => Status::Ok,
-		Err(e) => {
-
-			eprintln!("{e}");
-			Status::InternalServerError
-			
-		},
+		Err(e) => return internal_err(&e),
 	}
 
 }

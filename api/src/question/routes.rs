@@ -1,4 +1,4 @@
-use crate::BASE_URL;
+use crate::{BASE_URL, db_err_to_status, internal_err};
 use crate::account::Account;
 use crate::qwiz::Qwiz;
 use crate::question::{Question, NewQuestionData, QuestionError};
@@ -104,12 +104,7 @@ async fn get_question_by_qwiz_id_index(qwiz_id: i32, index: i32) -> Result<Json<
 
 	match Question::get_by_qwiz_id_index(&qwiz_id, &index).await {
 		Ok(question) => Ok(Json(GetQuestionData::from_question(question).await)),
-		Err(e) => {
-
-			eprintln!("{e}");
-			Err(Status::NotFound)
-			
-		},
+		Err(e) => Err(db_err_to_status(&e, Status::NotFound)),
 	}
 
 }
@@ -127,45 +122,25 @@ async fn create_question(qwiz_id: i32, question_data: Json<PostQuestionData>) ->
 	
 	let qwiz = match Qwiz::get_by_id(&qwiz_id).await {
 		Ok(qwiz) => qwiz,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Err(Status::NotFound)
-			
-		},
+		Err(e) => return Err(db_err_to_status(&e, Status::NotFound)),
 	};
 
 	let mut account = match Account::get_by_id(&qwiz.creator_id).await {
 		Ok(acc) => acc,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Err(Status::InternalServerError)
-			
-		},
+		Err(e) => return Err(internal_err(&e)),
 	};
 
 	match account.verify_password(&question_data.creator_password).await {
 		Ok(true) => (),
 		Ok(false) => return Err(Status::Unauthorized),
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Err(Status::InternalServerError)
-			
-		},
+		Err(e) => return Err(internal_err(&e)),
 	}
 
 
 
 	match Question::from_question_data(&qwiz_id, &question_data.question).await {
 		Ok(question) => Ok(Created::new(format!("{BASE_URL}/question/{qwiz_id}/{}", question.index))),
-		Err(e) => {
-
-			eprintln!("{e}");
-			Err(Status::BadRequest)
-			
-		},
+		Err(e) => Err(db_err_to_status(&e, Status::BadRequest)),
 	}
 
 }
@@ -189,46 +164,28 @@ struct PatchQuestionData {
 
 #[patch("/question/<qwiz_id>/<index>", data = "<new_question_data>")]
 async fn update_question(qwiz_id: i32, index: i32, new_question_data: Json<PatchQuestionData>) -> Result<Status, Either<Status, BadRequest<&'static str>>> {
+	
+	use QuestionError::*;
 
 	let mut question = match Question::get_by_qwiz_id_index(&qwiz_id, &index).await {
 		Ok(q) => q,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Err(Left(Status::NotFound))
-			
-		},
+		Err(e) => return Err(Left(db_err_to_status(&e, Status::NotFound))),
 	};
 
 	let qwiz = match Qwiz::get_by_id(&qwiz_id).await {
 		Ok(qwiz) => qwiz,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Err(Left(Status::NotFound))
-			
-		},
+		Err(e) => return Err(Left(db_err_to_status(&e, Status::NotFound))),
 	};
 
 	let mut account = match Account::get_by_id(&qwiz.creator_id).await {
 		Ok(acc) => acc,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Err(Left(Status::InternalServerError))
-			
-		},
+		Err(e) => return Err(Left(internal_err(&e))),
 	};
 
 	match account.verify_password(&new_question_data.creator_password).await {
 		Ok(true) => (),
 		Ok(false) => return Err(Left(Status::Unauthorized)),
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Err(Left(Status::InternalServerError))
-			
-		},
+		Err(e) => return Err(Left(internal_err(&e))),
 	}
 	
 
@@ -260,23 +217,11 @@ async fn update_question(qwiz_id: i32, index: i32, new_question_data: Json<Patch
 	}
 
 	if let Some(new_embed) = &new_question_data.new_embed {
-		use QuestionError::*;
-
 		match question.update_embed(new_embed).await {
 			Ok(_) => (),
-			Err(Sqlx(e)) => {
-				
-				eprintln!("{e}");
-				return Err(Left(Status::InternalServerError))
-
-			},
+			Err(Sqlx(e)) => return Err(Left(internal_err(&e))),
 			Err(Base64(_)) => return Err(Right(BadRequest(Some("Bad embed base64")))),
-			Err(IO(e)) => {
-				
-				eprintln!("{e}");
-				return Err(Left(Status::InternalServerError))
-
-			},
+			Err(IO(e)) => return Err(Left(internal_err(&e))),
 		}
 	}
 
@@ -296,55 +241,30 @@ async fn delete_question(qwiz_id: i32, index: i32, delete_question_data: Json<De
 
 	let question = match Question::get_by_qwiz_id_index(&qwiz_id, &index).await {
 		Ok(q) => q,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Status::NotFound
-			
-		},
+		Err(e) => return db_err_to_status(&e, Status::NotFound),
 	};
 
 	let qwiz = match Qwiz::get_by_id(&qwiz_id).await {
 		Ok(qwiz) => qwiz,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Status::NotFound
-			
-		},
+		Err(e) => return db_err_to_status(&e, Status::NotFound),
 	};
 
 	let mut account = match Account::get_by_id(&qwiz.creator_id).await {
 		Ok(acc) => acc,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Status::InternalServerError
-
-		},
+		Err(e) => return internal_err(&e),
 	};
 
 	match account.verify_password(&delete_question_data.creator_password).await {
 		Ok(true) => (),
 		Ok(false) => return Status::Unauthorized,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Status::InternalServerError
-			
-		},
+		Err(e) => return internal_err(&e),
 	}
 
 
 
 	match question.delete().await {
 		Ok(_) => Status::Ok,
-		Err(e) => {
-
-			eprintln!("{e}");
-			Status::InternalServerError
-			
-		},
+		Err(e) => internal_err(&e),
 	}
 
 }

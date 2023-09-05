@@ -14,7 +14,7 @@ mod crypto;
 
 
 use crate::account::Account;
-use std::str::FromStr;
+use std::{str::FromStr, error::Error};
 use rocket::{http::Status, Request, fs::{FileServer, relative}};
 use sqlx::{Pool, Postgres, postgres::{PgPoolOptions, PgConnectOptions}, ConnectOptions};
 use async_once::AsyncOnce;
@@ -77,4 +77,22 @@ r#"
 /vote
 /media
 "#
+}
+
+
+
+pub fn internal_err(e: &dyn Error) -> Status {
+
+	eprintln!("{e}");
+	Status::InternalServerError
+
+}
+
+pub fn db_err_to_status(e: &sqlx::Error, status: Status) -> Status {
+
+	match e {
+		sqlx::Error::Database(_) | sqlx::Error::RowNotFound => status,
+		e => internal_err(e),
+	}
+
 }
