@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 15.2
--- Dumped by pg_dump version 15.2
+-- Dumped from database version 14.9 (Ubuntu 14.9-0ubuntu0.22.04.1)
+-- Dumped by pg_dump version 14.9 (Ubuntu 14.9-0ubuntu0.22.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -228,7 +228,8 @@ ALTER SEQUENCE public.account_id_seq OWNED BY public.account.id;
 
 CREATE TABLE public.class (
     id integer NOT NULL,
-    teacher_id integer NOT NULL
+    teacher_id integer NOT NULL,
+    name character varying(100) NOT NULL
 );
 
 
@@ -300,7 +301,8 @@ CREATE TABLE public.qwiz (
     name character varying(100) NOT NULL,
     creator_id integer NOT NULL,
     thumbnail_uuid uuid,
-    public boolean DEFAULT true NOT NULL
+    public boolean DEFAULT true NOT NULL,
+    create_time timestamp without time zone DEFAULT (now() AT TIME ZONE 'UTC'::text) NOT NULL
 );
 
 
@@ -557,13 +559,6 @@ ALTER TABLE ONLY public.vote
 
 ALTER TABLE ONLY public.vote
     ADD CONSTRAINT vote_voter_id_fkey FOREIGN KEY (voter_id) REFERENCES public.account(id) ON DELETE CASCADE;
-
-
---
--- Name: SCHEMA public; Type: ACL; Schema: -; Owner: pg_database_owner
---
-
-GRANT ALL ON SCHEMA public TO qwiz;
 
 
 --
