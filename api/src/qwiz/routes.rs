@@ -23,6 +23,7 @@ pub fn all() -> Vec<Route> {
 		qwiz_info,
 		get_qwiz_by_id,
 		get_best,
+		get_recent,
 		create_qwiz,
 		update_qwiz,
 		delete_qwiz,
@@ -37,7 +38,9 @@ fn qwiz_info() -> &'static str {
 r#"
 GET /qwiz/<id> - get qwiz data by id
 
-GET /qwiz/best?<page> - get 50 best qwizes rated by votes
+GET /qwiz/best?<page>&<search> - get 50 best qwizes by name, rated by votes
+
+GET /qwiz/recent?<page> - get 50 best qwizes created in the last 2 weeks, rated by votes
 
 POST /qwiz - create a qwiz
 creator_password: String - required
@@ -80,6 +83,7 @@ struct GetFullQwizData {
 	thumbnail: Option<GetMediaData>,
 	questions: Vec<GetQuestionData>,
 	public: bool,
+	create_time: i64,
 }
 impl GetFullQwizData {
 
@@ -101,6 +105,7 @@ impl GetFullQwizData {
 				},
 				questions,
 				public: qwiz.public,
+				create_time: qwiz.create_time.timestamp_millis(),
 			}
 		)
 
@@ -133,6 +138,7 @@ pub struct GetShortQwizData {
 	pub votes: Option<i64>,
 	pub creator_name: Option<String>,
 	pub creator_profile_picture_uri: Option<String>,
+	pub create_time: Option<i64>,
 }
 
 #[get("/qwiz/best?<page>&<search>")]
@@ -151,6 +157,16 @@ async fn get_best(page: Option<u32>, search: Option<String>) -> Result<Json<Vec<
 				Err(e) => Err(db_err_to_status(&e, Status::BadRequest)),
 			}
 		},
+	}
+
+}
+
+#[get("/qwiz/recent?<page>")]
+async fn get_recent(page: Option<u32>) -> Result<Json<Vec<GetShortQwizData>>, Status> {
+	
+	match Qwiz::get_recent(14, page.unwrap_or(0) as i64).await {
+		Ok(datas) => Ok(Json(datas)),
+		Err(e) => Err(db_err_to_status(&e, Status::BadRequest)),
 	}
 
 }

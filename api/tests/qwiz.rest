@@ -42,6 +42,15 @@ POST {{base_url}}
 ### get by id
 GET {{base_url}}/{{id}}
 
+### get best
+GET {{base_url}}/best
+
+### search
+GET {{base_url}}/best?search=test
+
+### recent
+GET {{base_url}}/recent
+
 
 
 ### invalid patch - id

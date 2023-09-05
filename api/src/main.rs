@@ -83,7 +83,7 @@ r#"
 
 pub fn internal_err(e: &dyn Error) -> Status {
 
-	eprintln!("{e}");
+	eprintln!("\x1b[0;31mERROR: {e}\x1b[0m");
 	Status::InternalServerError
 
 }

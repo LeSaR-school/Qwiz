@@ -7,7 +7,7 @@ use crate::qwiz::routes::GetShortQwizData;
 use crate::media::{Media, NewMediaData, MediaError};
 use std::fmt::Display;
 use serde::Deserialize;
-use sqlx::types::Uuid;
+use sqlx::types::{Uuid, chrono::NaiveDateTime};
 
 
 
@@ -54,17 +54,6 @@ impl From<std::io::Error> for QwizError {
 		Self::IO(value)
 	}
 }
-// impl From<MediaError> for QwizError {
-// 	fn from(value: MediaError) -> Self {
-		
-// 		match value {
-// 			MediaError::Sqlx(e) => QwizError::Sqlx(e),
-// 			MediaError::Base64(e) => QwizError::Base64(e),
-// 			MediaError::IO(e) => QwizError::IO(e),
-// 		}
-
-// 	}
-// }
 
 
 
@@ -74,6 +63,7 @@ pub struct Qwiz {
 	pub creator_id: i32,
 	thumbnail_uuid: Option<Uuid>,
 	public: bool,
+	create_time: NaiveDateTime,
 }
 
 impl Qwiz {
@@ -193,7 +183,8 @@ impl Qwiz {
 			(SELECT uri FROM media WHERE uuid=thumbnail_uuid) AS thumbnail_uri,
 			(SELECT COUNT(*) FROM vote WHERE qwiz_id=id) AS votes,
 			(SELECT username FROM account WHERE id=creator_id) AS creator_name,
-			(SELECT uri FROM media WHERE uuid=(SELECT profile_picture_uuid FROM account WHERE id=creator_id)) as creator_profile_picture_uri
+			(SELECT uri FROM media WHERE uuid=(SELECT profile_picture_uuid FROM account WHERE id=creator_id)) as creator_profile_picture_uri,
+			CAST(EXTRACT(EPOCH FROM create_time) * 1000 AS BIGINT) AS create_time
 			FROM qwiz
 			ORDER BY votes LIMIT 50 OFFSET $1"#,
 			page * 50,
@@ -204,13 +195,15 @@ impl Qwiz {
 	}
 
 	pub async fn get_by_name(name: &String, page: i64) -> sqlx::Result<Vec<GetShortQwizData>> {
+		
 		sqlx::query_as!(
 			GetShortQwizData,
 			r#"SELECT id, name,
 			(SELECT uri FROM media WHERE uuid=thumbnail_uuid) AS thumbnail_uri,
 			(SELECT COUNT(*) FROM vote WHERE qwiz_id=id) AS votes,
 			(SELECT username FROM account WHERE id=creator_id) AS creator_name,
-			(SELECT uri FROM media WHERE uuid=(SELECT profile_picture_uuid FROM account WHERE id=creator_id)) as creator_profile_picture_uri
+			(SELECT uri FROM media WHERE uuid=(SELECT profile_picture_uuid FROM account WHERE id=creator_id)) as creator_profile_picture_uri,
+			CAST(EXTRACT(EPOCH FROM create_time) * 1000 AS BIGINT) AS create_time
 			FROM qwiz WHERE name LIKE $1
 			ORDER BY votes LIMIT 50 OFFSET $2"#,
 			format!("{name}%"),
@@ -218,6 +211,27 @@ impl Qwiz {
 		)
 		.fetch_all(POOL.get().await)
 		.await
+
+	}
+
+	pub async fn get_recent(days: u16, page: i64) -> sqlx::Result<Vec<GetShortQwizData>> {
+
+		sqlx::query_as!(
+			GetShortQwizData,
+			r#"SELECT id, name,
+			(SELECT uri FROM media WHERE uuid=thumbnail_uuid) AS thumbnail_uri,
+			(SELECT COUNT(*) FROM vote WHERE qwiz_id=id) AS votes,
+			(SELECT username FROM account WHERE id=creator_id) AS creator_name,
+			(SELECT uri FROM media WHERE uuid=(SELECT profile_picture_uuid FROM account WHERE id=creator_id)) as creator_profile_picture_uri,
+			CAST(EXTRACT(EPOCH FROM create_time AT TIME ZONE 'UTC') * 1000 AS BIGINT) AS create_time
+			FROM qwiz WHERE create_time >= (NOW() - MAKE_INTERVAL(days => $1))
+			ORDER BY votes LIMIT 50 OFFSET $2"#,
+			days as i32,
+			page * 50,
+		)
+		.fetch_all(POOL.get().await)
+		.await
+
 	}
 
 }
