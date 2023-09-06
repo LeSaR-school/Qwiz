@@ -76,7 +76,6 @@ pub struct GetQuestionData {
 	asnwer2: String,
 	answer3: Option<String>,
 	answer4: Option<String>,
-	correct: i16,
 	embed: Option<GetMediaData>,
 }
 impl GetQuestionData {
@@ -89,7 +88,6 @@ impl GetQuestionData {
 			asnwer2: question.answer2,
 			answer3: question.answer3,
 			answer4: question.answer4,
-			correct: question.correct,
 			embed: match question.embed_uuid {
 				Some(uuid) => Media::get_by_uuid(&uuid).await.ok().map(Into::into),
 				None => None,

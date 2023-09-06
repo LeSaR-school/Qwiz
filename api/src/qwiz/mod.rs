@@ -185,7 +185,7 @@ impl Qwiz {
 			(SELECT username FROM account WHERE id=creator_id) AS creator_name,
 			(SELECT uri FROM media WHERE uuid=(SELECT profile_picture_uuid FROM account WHERE id=creator_id)) as creator_profile_picture_uri,
 			CAST(EXTRACT(EPOCH FROM create_time) * 1000 AS BIGINT) AS create_time
-			FROM qwiz
+			FROM qwiz WHERE public
 			ORDER BY votes LIMIT 50 OFFSET $1"#,
 			page * 50,
 		)
@@ -204,7 +204,7 @@ impl Qwiz {
 			(SELECT username FROM account WHERE id=creator_id) AS creator_name,
 			(SELECT uri FROM media WHERE uuid=(SELECT profile_picture_uuid FROM account WHERE id=creator_id)) as creator_profile_picture_uri,
 			CAST(EXTRACT(EPOCH FROM create_time) * 1000 AS BIGINT) AS create_time
-			FROM qwiz WHERE name LIKE $1
+			FROM qwiz WHERE public AND name LIKE $1
 			ORDER BY votes LIMIT 50 OFFSET $2"#,
 			format!("{name}%"),
 			page * 50,
@@ -224,7 +224,7 @@ impl Qwiz {
 			(SELECT username FROM account WHERE id=creator_id) AS creator_name,
 			(SELECT uri FROM media WHERE uuid=(SELECT profile_picture_uuid FROM account WHERE id=creator_id)) as creator_profile_picture_uri,
 			CAST(EXTRACT(EPOCH FROM create_time AT TIME ZONE 'UTC') * 1000 AS BIGINT) AS create_time
-			FROM qwiz WHERE create_time >= (NOW() - MAKE_INTERVAL(days => $1))
+			FROM qwiz WHERE public AND create_time >= (NOW() - MAKE_INTERVAL(days => $1))
 			ORDER BY votes LIMIT 50 OFFSET $2"#,
 			days as i32,
 			page * 50,
