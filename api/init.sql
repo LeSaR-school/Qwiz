@@ -58,6 +58,37 @@ CREATE TYPE public.media_type AS ENUM (
 ALTER TYPE public.media_type OWNER TO qwiz;
 
 --
+-- Name: check_student_class_func(); Type: FUNCTION; Schema: public; Owner: qwiz
+--
+
+CREATE FUNCTION public.check_student_class_func() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+
+declare
+type account_type;
+class integer;
+begin
+
+select account_type into type from account where id=NEW."student_id";
+select class_id into class from assignment where id=NEW."assignment_id";
+
+if type!='student' then
+raise exception 'User with id % is not a student', NEW."student_id";
+elsif NEW."student_id" NOT IN (SELECT student_id FROM student WHERE class_id=class) then
+raise exception 'User with id % is not in class id %', NEW."student_id", class;
+end if;
+
+return NEW;
+
+end;
+
+$$;
+
+
+ALTER FUNCTION public.check_student_class_func() OWNER TO qwiz;
+
+--
 -- Name: check_student_func(); Type: FUNCTION; Schema: public; Owner: qwiz
 --
 
@@ -191,11 +222,11 @@ SET default_table_access_method = heap;
 --
 
 CREATE TABLE public.account (
-    id integer NOT NULL,
     username character varying(20) NOT NULL,
     password_hash character(128) NOT NULL,
     profile_picture_uuid uuid,
-    account_type public.account_type NOT NULL
+    account_type public.account_type NOT NULL,
+    id integer NOT NULL
 );
 
 
@@ -205,21 +236,43 @@ ALTER TABLE public.account OWNER TO qwiz;
 -- Name: account_id_seq; Type: SEQUENCE; Schema: public; Owner: qwiz
 --
 
-CREATE SEQUENCE public.account_id_seq
+ALTER TABLE public.account ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.account_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
     NO MAXVALUE
-    CACHE 1;
+    CACHE 1
+);
 
-
-ALTER TABLE public.account_id_seq OWNER TO qwiz;
 
 --
--- Name: account_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: qwiz
+-- Name: assignment; Type: TABLE; Schema: public; Owner: qwiz
 --
 
-ALTER SEQUENCE public.account_id_seq OWNED BY public.account.id;
+CREATE TABLE public.assignment (
+    qwiz_id integer NOT NULL,
+    class_id integer NOT NULL,
+    open_time timestamp without time zone,
+    close_time timestamp without time zone,
+    id integer NOT NULL
+);
+
+
+ALTER TABLE public.assignment OWNER TO qwiz;
+
+--
+-- Name: assignment_id_seq; Type: SEQUENCE; Schema: public; Owner: qwiz
+--
+
+ALTER TABLE public.assignment ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.assignment_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
 
 
 --
@@ -227,9 +280,9 @@ ALTER SEQUENCE public.account_id_seq OWNED BY public.account.id;
 --
 
 CREATE TABLE public.class (
-    id integer NOT NULL,
     teacher_id integer NOT NULL,
-    name character varying(100) NOT NULL
+    name character varying(100) NOT NULL,
+    id integer NOT NULL
 );
 
 
@@ -239,23 +292,27 @@ ALTER TABLE public.class OWNER TO qwiz;
 -- Name: class_id_seq; Type: SEQUENCE; Schema: public; Owner: qwiz
 --
 
-CREATE SEQUENCE public.class_id_seq
-    AS integer
+ALTER TABLE public.class ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.class_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
     NO MAXVALUE
-    CACHE 1;
+    CACHE 1
+);
 
-
-ALTER TABLE public.class_id_seq OWNER TO qwiz;
 
 --
--- Name: class_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: qwiz
+-- Name: completed_assignment; Type: TABLE; Schema: public; Owner: qwiz
 --
 
-ALTER SEQUENCE public.class_id_seq OWNED BY public.class.id;
+CREATE TABLE public.completed_assignment (
+    assignment_id integer NOT NULL,
+    student_id integer NOT NULL
+);
 
+
+ALTER TABLE public.completed_assignment OWNER TO qwiz;
 
 --
 -- Name: media; Type: TABLE; Schema: public; Owner: qwiz
@@ -297,12 +354,12 @@ ALTER TABLE public.question OWNER TO qwiz;
 --
 
 CREATE TABLE public.qwiz (
-    id integer NOT NULL,
     name character varying(100) NOT NULL,
     creator_id integer NOT NULL,
     thumbnail_uuid uuid,
     public boolean DEFAULT true NOT NULL,
-    create_time timestamp without time zone DEFAULT (now() AT TIME ZONE 'UTC'::text) NOT NULL
+    create_time timestamp without time zone DEFAULT (now() AT TIME ZONE 'UTC'::text) NOT NULL,
+    id integer NOT NULL
 );
 
 
@@ -312,22 +369,14 @@ ALTER TABLE public.qwiz OWNER TO qwiz;
 -- Name: qwiz_id_seq; Type: SEQUENCE; Schema: public; Owner: qwiz
 --
 
-CREATE SEQUENCE public.qwiz_id_seq
-    AS integer
+ALTER TABLE public.qwiz ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.qwiz_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
     NO MAXVALUE
-    CACHE 1;
-
-
-ALTER TABLE public.qwiz_id_seq OWNER TO qwiz;
-
---
--- Name: qwiz_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: qwiz
---
-
-ALTER SEQUENCE public.qwiz_id_seq OWNED BY public.qwiz.id;
+    CACHE 1
+);
 
 
 --
@@ -355,27 +404,6 @@ CREATE TABLE public.vote (
 ALTER TABLE public.vote OWNER TO qwiz;
 
 --
--- Name: account id; Type: DEFAULT; Schema: public; Owner: qwiz
---
-
-ALTER TABLE ONLY public.account ALTER COLUMN id SET DEFAULT nextval('public.account_id_seq'::regclass);
-
-
---
--- Name: class id; Type: DEFAULT; Schema: public; Owner: qwiz
---
-
-ALTER TABLE ONLY public.class ALTER COLUMN id SET DEFAULT nextval('public.class_id_seq'::regclass);
-
-
---
--- Name: qwiz id; Type: DEFAULT; Schema: public; Owner: qwiz
---
-
-ALTER TABLE ONLY public.qwiz ALTER COLUMN id SET DEFAULT nextval('public.qwiz_id_seq'::regclass);
-
-
---
 -- Name: account account_pkey; Type: CONSTRAINT; Schema: public; Owner: qwiz
 --
 
@@ -389,6 +417,14 @@ ALTER TABLE ONLY public.account
 
 ALTER TABLE ONLY public.account
     ADD CONSTRAINT account_username_key UNIQUE (username);
+
+
+--
+-- Name: assignment assignment_pkey; Type: CONSTRAINT; Schema: public; Owner: qwiz
+--
+
+ALTER TABLE ONLY public.assignment
+    ADD CONSTRAINT assignment_pkey PRIMARY KEY (id);
 
 
 --
@@ -437,6 +473,13 @@ ALTER TABLE ONLY public.student
 
 ALTER TABLE ONLY public.vote
     ADD CONSTRAINT vote_pkey PRIMARY KEY (voter_id, qwiz_id);
+
+
+--
+-- Name: completed_assignment check_student; Type: TRIGGER; Schema: public; Owner: qwiz
+--
+
+CREATE TRIGGER check_student BEFORE INSERT OR UPDATE ON public.completed_assignment FOR EACH ROW EXECUTE FUNCTION public.check_student_class_func();
 
 
 --
@@ -490,11 +533,43 @@ ALTER TABLE ONLY public.account
 
 
 --
+-- Name: assignment assignment_class_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: qwiz
+--
+
+ALTER TABLE ONLY public.assignment
+    ADD CONSTRAINT assignment_class_id_fkey FOREIGN KEY (class_id) REFERENCES public.class(id) ON DELETE CASCADE;
+
+
+--
+-- Name: assignment assignment_qwiz_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: qwiz
+--
+
+ALTER TABLE ONLY public.assignment
+    ADD CONSTRAINT assignment_qwiz_id_fkey FOREIGN KEY (qwiz_id) REFERENCES public.qwiz(id) ON DELETE CASCADE;
+
+
+--
 -- Name: class class_teacher_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: qwiz
 --
 
 ALTER TABLE ONLY public.class
     ADD CONSTRAINT class_teacher_id_fkey FOREIGN KEY (teacher_id) REFERENCES public.account(id) ON DELETE CASCADE;
+
+
+--
+-- Name: completed_assignment completed_assignment_assignment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: qwiz
+--
+
+ALTER TABLE ONLY public.completed_assignment
+    ADD CONSTRAINT completed_assignment_assignment_id_fkey FOREIGN KEY (assignment_id) REFERENCES public.assignment(id) ON DELETE CASCADE;
+
+
+--
+-- Name: completed_assignment completed_assignment_student_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: qwiz
+--
+
+ALTER TABLE ONLY public.completed_assignment
+    ADD CONSTRAINT completed_assignment_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.account(id) ON DELETE CASCADE;
 
 
 --
