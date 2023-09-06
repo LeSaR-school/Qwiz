@@ -14,10 +14,11 @@ mod crypto;
 
 
 use crate::account::Account;
-use std::{str::FromStr, error::Error};
+use std::{str::FromStr, error::Error, env::var};
 use rocket::{http::Status, Request, fs::{FileServer, relative}};
 use sqlx::{Pool, Postgres, postgres::{PgPoolOptions, PgConnectOptions}, ConnectOptions};
 use async_once::AsyncOnce;
+use dotenv::dotenv;
 
 
 
@@ -25,10 +26,12 @@ pub static BASE_URL: &str = "/api";
 lazy_static! {
 
 	pub static ref POOL: AsyncOnce<Pool<Postgres>> = AsyncOnce::new(async {
+
+		dotenv().ok();
 		
 		PgPoolOptions::new()
 			.connect_with(
-				PgConnectOptions::from_str(env!("DATABASE_URL")).unwrap()
+				PgConnectOptions::from_str(&var("DATABASE_URL").expect("Please set DATABASE_URL environment variable")).expect("Please provide a valid database url")
 				.disable_statement_logging().clone()
 			)
 			.await

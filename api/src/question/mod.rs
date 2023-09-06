@@ -50,11 +50,13 @@ impl From<sqlx::Error> for QuestionError {
 }
 impl From<MediaError> for QuestionError {
 	fn from(value: MediaError) -> Self {
-		
+
+		use MediaError::*;
+
 		match value {
-			MediaError::Sqlx(e) => QuestionError::Sqlx(e),
-			MediaError::Base64(e) => QuestionError::Base64(e),
-			MediaError::IO(e) => QuestionError::IO(e),
+			Sqlx(e) => QuestionError::Sqlx(e),
+			Base64(e) => QuestionError::Base64(e),
+			IO(e) => QuestionError::IO(e),
 		}
 
 	}

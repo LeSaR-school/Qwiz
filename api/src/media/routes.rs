@@ -37,14 +37,12 @@ pub struct GetMediaData {
 	media_type: MediaType
 }
 impl From<Media> for GetMediaData {
-
 	fn from(value: Media) -> Self {
 		Self {
 			uri: value.uri,
 			media_type: value.media_type,
 		}
 	}
-
 }
 
 #[get("/media/<uuid>")]
