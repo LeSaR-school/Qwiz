@@ -1,6 +1,6 @@
 use crate::{BASE_URL, internal_err, db_err_to_status};
 use crate::account::Account;
-use crate::qwiz::Qwiz;
+use crate::qwiz::{Qwiz, QwizSolveError};
 use crate::question::{Question, NewQuestionData, routes::GetQuestionData, QuestionError};
 use crate::media::{Media, NewMediaData, routes::GetMediaData, MediaError};
 
@@ -27,6 +27,7 @@ pub fn all() -> Vec<Route> {
 		create_qwiz,
 		update_qwiz,
 		delete_qwiz,
+		solve_qwiz,
 	]
 
 }
@@ -56,7 +57,7 @@ questions: Vector of {
 	answer2: String - required,
 	answer3: String - optional,
 	answer4: String - optional,
-	correct: 1 / 2 / 3 / 4 - required,
+	correct: 1/2/3/4 - required,
 	embed: {
 		data: String - required
 		media_type: MediaType - required
@@ -70,6 +71,10 @@ new_thumbnail: String - optional
 
 DELETE /qwiz/<id> - delete qwiz
 creator_password: String - required
+
+POST /qwiz/<id>/solve - solve qwiz
+
+answers: Vec<1/2/3/4> - required
 "#
 }
 
@@ -202,7 +207,7 @@ async fn create_qwiz(qwiz_data: Json<PostQwizData>) -> Result<Created<String>, E
 
 		Ok(qwiz) => qwiz,
 		Err(Sqlx(e)) => return Err(Left(db_err_to_status(&e, Status::BadRequest))),
-		Err(Base64(_)) => return Err(Right(BadRequest(Some("Bad thumbnail base64")))),
+		Err(Base64(_)) => return Err(Right(BadRequest(Some("bad thumbnail base64")))),
 		Err(IO(e)) => return Err(Left(internal_err(&e))),
 
 	};
@@ -216,7 +221,7 @@ async fn create_qwiz(qwiz_data: Json<PostQwizData>) -> Result<Created<String>, E
 		}
 		match e {
 			Sqlx(e) => return Err(Left(db_err_to_status(&e, Status::BadRequest))),
-			Base64(_) => return Err(Right(BadRequest(Some("Bad media base64")))),
+			Base64(_) => return Err(Right(BadRequest(Some("bad media base64")))),
 			IO(e) => return Err(Left(internal_err(&e))),
 		}
 
@@ -260,7 +265,7 @@ async fn update_qwiz(id: i32, new_qwiz_data: Json<PatchQwizData>) -> Result<Stat
 
 	if let Some(new_name) = &new_qwiz_data.new_name {
 		if qwiz.update_name(new_name).await.is_err() {
-			return Err(Right(BadRequest(Some("Bad name"))));
+			return Err(Right(BadRequest(Some("bad name"))));
 		}
 	}
 
@@ -268,7 +273,7 @@ async fn update_qwiz(id: i32, new_qwiz_data: Json<PatchQwizData>) -> Result<Stat
 		match qwiz.update_thumbnail(new_thumbnail).await {
 			Ok(_) => (),
 			Err(Sqlx(e)) => return Err(Left(internal_err(&e))),
-			Err(Base64(_)) => return Err(Right(BadRequest(Some("Bad thumbnail base64")))),
+			Err(Base64(_)) => return Err(Right(BadRequest(Some("bad thumbnail base64")))),
 			Err(IO(e)) => return Err(Left(internal_err(&e))),
 		}
 	}
@@ -308,6 +313,38 @@ async fn delete_qwiz(id: i32, delete_qwiz_data: Json<DeleteQwizData>) -> Status 
 	match qwiz.delete().await {
 		Ok(_) => Status::Ok,
 		Err(e) => return internal_err(&e),
+	}
+
+}
+
+
+
+#[derive(Deserialize)]
+pub struct PostSolveQwizData {
+	pub answers: Vec<u8>,
+}
+
+#[derive(Serialize)]
+struct SolveQwizData {
+	correct: u32,
+	total: u32,
+	results: Vec<bool>,
+}
+
+#[post("/qwiz/<id>/solve", data = "<solve_qwiz_data>")]
+async fn solve_qwiz(id: i32, solve_qwiz_data: Json<PostSolveQwizData>) -> Result<Json<SolveQwizData>, Either<Status, BadRequest<&'static str>>> {
+
+	use QwizSolveError::*;
+
+	let qwiz = match Qwiz::get_by_id(&id).await {
+		Ok(qwiz) => qwiz,
+		Err(e) => return Err(Left(db_err_to_status(&e, Status::NotFound))),
+	};
+
+	match qwiz.solve(&solve_qwiz_data.answers).await {
+		Ok(results) => Ok(Json(SolveQwizData { correct: results.iter().filter(|&r| *r == true).count() as u32, total: results.len() as u32, results: results })),
+		Err(Sqlx(e)) => Err(Left(internal_err(&e))),
+		Err(e) => Err(Right(BadRequest(Some(e.as_str())))),
 	}
 
 }

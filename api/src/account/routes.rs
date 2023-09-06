@@ -158,14 +158,14 @@ async fn update_account(id: i32, new_account_data: Json<PatchAccountData>) -> Re
 	
 	if let Some(new_account_type) = &new_account_data.new_account_type {
 		if account.update_account_type(new_account_type).await.is_err() {
-			return Err(Right(BadRequest(Some("Bad account type"))));
+			return Err(Right(BadRequest(Some("bad account type"))));
 		}
 	}
 	
 	if let Some(new_password) = &new_account_data.new_password {
 		match account.update_password(new_password).await {
 			Ok(true) => (),
-			Ok(false) => return Err(Right(BadRequest(Some("Bad password")))),
+			Ok(false) => return Err(Right(BadRequest(Some("bad password")))),
 			Err(e) => return Err(Left(internal_err(&e))),
 		}
 	}
@@ -176,7 +176,7 @@ async fn update_account(id: i32, new_account_data: Json<PatchAccountData>) -> Re
 		match account.update_profile_picture(new_profile_picture).await {
 			Ok(_) => (),
 			Err(Sqlx(e)) => return Err(Left(internal_err(&e))),
-			Err(Base64(_)) => return Err(Right(BadRequest(Some("Bad profile picture base64")))),
+			Err(Base64(_)) => return Err(Right(BadRequest(Some("bad profile picture base64")))),
 			Err(IO(e)) => return Err(Left(internal_err(&e))),
 		}
 	}

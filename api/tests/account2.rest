@@ -2,13 +2,13 @@
 
 @base_url = http://localhost:8000/api/account
 
-@username = test acc 2
-@password = password1234
+@username = test_acc_2
+@password = pAssword1234&
 
 @account_type = Teacher
 
 # fill in after first post
-@id = 5
+@id = 4
 
 
 

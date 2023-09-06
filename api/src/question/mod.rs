@@ -387,11 +387,11 @@ impl Question {
 		Ok(true)
 
 	}
-	pub async fn update_correct(&mut self, new_correct: &i16) -> sqlx::Result<()> {
+	pub async fn update_correct(&mut self, new_correct: &u8) -> sqlx::Result<()> {
 
 		self.correct = sqlx::query!(
 			"UPDATE question SET correct=$1 WHERE qwiz_id=$2 AND index=$3 RETURNING correct",
-			new_correct,
+			*new_correct as i16,
 			self.qwiz_id,
 			self.index,
 		)

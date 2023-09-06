@@ -5,6 +5,7 @@ pub mod routes;
 use crate::POOL;
 use crate::qwiz::routes::GetShortQwizData;
 use crate::media::{Media, NewMediaData, MediaError};
+use std::cmp::Ordering;
 use std::fmt::Display;
 use serde::Deserialize;
 use sqlx::types::{Uuid, chrono::NaiveDateTime};
@@ -52,6 +53,34 @@ impl From<base64::DecodeError> for QwizError {
 impl From<std::io::Error> for QwizError {
 	fn from(value: std::io::Error) -> Self {
 		Self::IO(value)
+	}
+}
+
+
+
+pub enum QwizSolveError {
+	Sqlx(sqlx::Error),
+	InvalidAnswer,
+	NotEnoughAnswers,
+	TooManyAnswers,
+}
+impl From<sqlx::Error> for QwizSolveError {
+	fn from(value: sqlx::Error) -> Self {
+		Self::Sqlx(value)
+	}
+}
+impl QwizSolveError {
+	fn as_str(&self) -> &'static str {
+
+		use QwizSolveError::*;
+
+		match self {
+			Sqlx(_) => "sqlx error",
+			InvalidAnswer => "bad answer (greater than 4)",
+			TooManyAnswers => "too many answers",
+			NotEnoughAnswers => "not enough answers",
+		}
+
 	}
 }
 
@@ -231,6 +260,34 @@ impl Qwiz {
 		)
 		.fetch_all(POOL.get().await)
 		.await
+
+	}
+
+
+
+	pub async fn solve(&self, answers: &Vec<u8>) -> Result<Vec<bool>, QwizSolveError> {
+
+		use Ordering::*;
+		
+		if answers.iter().any(|a| *a > 4) {
+			return Err(QwizSolveError::InvalidAnswer)
+		}
+
+		let correct: Vec<u8> = sqlx::query!(
+			"SELECT correct FROM question WHERE qwiz_id=$1 ORDER BY index",
+			self.id
+		)
+		.fetch_all(POOL.get().await)
+		.await?
+		.into_iter()
+		.map(|r| r.correct as u8)
+		.collect();
+
+		match answers.len().cmp(&correct.len()) {
+			Greater => Err(QwizSolveError::TooManyAnswers),
+			Less => Err(QwizSolveError::NotEnoughAnswers),
+			Equal => Ok(correct.into_iter().zip(answers).map(|answers| answers.0 == *answers.1).collect())
+		}
 
 	}
 

@@ -41,7 +41,7 @@ question: {
 	answer2: String - required,
 	answer3: String - optional,
 	answer4: String - optional,
-	correct: 1 / 2 / 3 / 4 - required,
+	correct: 1/2/3/4 - required,
 	embed: {
 		data: String - required
 		media_type: MediaType - required
@@ -52,9 +52,9 @@ PATCH /question/<qwiz_id>/<index> - update question data
 creator_password: String - required
 new_index: i32 - optional
 new_body: String - optional
-new answers: Vector of {
-	index: 1 / 2 / 3 / 4 - required,
-	new_answer: String - optional (null to delete)
+new_answers: Vector of {
+	index: 1/2/3/4 - required,
+	content: String - optional (null to delete)
 } - optional
 new_embed: {
 	data: String - required
@@ -156,7 +156,7 @@ struct PatchQuestionData {
 	new_index: Option<i32>,
 	new_body: Option<String>,
 	new_answers: Option<Vec<NewAnswer>>,
-	new_correct: Option<i16>,
+	new_correct: Option<u8>,
 	new_embed: Option<NewMediaData>,
 }
 
@@ -190,27 +190,27 @@ async fn update_question(qwiz_id: i32, index: i32, new_question_data: Json<Patch
 
 	if let Some(new_index) = &new_question_data.new_index {
 		if question.update_index(new_index).await.is_err() {
-			return Err(Right(BadRequest(Some("Bad index"))));
+			return Err(Right(BadRequest(Some("bad index"))));
 		}
 	}
 
 	if let Some(new_body) = &new_question_data.new_body {
 		if question.update_body(new_body).await.is_err() {
-			return Err(Right(BadRequest(Some("Bad body"))));
+			return Err(Right(BadRequest(Some("bad body"))));
 		}
 	}
 
 	if let Some(new_answers) = &new_question_data.new_answers {
 		for new_answer in new_answers {
 			if question.update_answer(&new_answer.index, &new_answer.content).await.is_err() {
-				return Err(Right(BadRequest(Some("Bad answer"))));
+				return Err(Right(BadRequest(Some("bad answer"))));
 			}
 		}
 	}
 
 	if let Some(new_correct) = &new_question_data.new_correct {
 		if question.update_correct(new_correct).await.is_err() {
-			return Err(Right(BadRequest(Some("Bad correct"))));
+			return Err(Right(BadRequest(Some("bad correct"))));
 		}
 	}
 
@@ -218,7 +218,7 @@ async fn update_question(qwiz_id: i32, index: i32, new_question_data: Json<Patch
 		match question.update_embed(new_embed).await {
 			Ok(_) => (),
 			Err(Sqlx(e)) => return Err(Left(internal_err(&e))),
-			Err(Base64(_)) => return Err(Right(BadRequest(Some("Bad embed base64")))),
+			Err(Base64(_)) => return Err(Right(BadRequest(Some("bad embed base64")))),
 			Err(IO(e)) => return Err(Left(internal_err(&e))),
 		}
 	}

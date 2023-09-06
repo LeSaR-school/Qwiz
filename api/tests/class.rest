@@ -3,13 +3,13 @@
 @base_url = http://localhost:8000/api/class
 @account_url = http://localhost:8000/api/account
 
-@teacher_id = 5
-@teacher_password = password1234
+@teacher_id = 4
+@teacher_password = pAssword1234&
 
 @student_id = 3
-@student_password = password123
+@student_password = Password123!
 
-@id = 5
+@id = 1
 
 
 
@@ -22,7 +22,8 @@ POST {{base_url}}
 {
 	"teacher_password": "{{teacher_password}}",
 	"class": {
-		"teacher_id": {{teacher_id}}
+		"teacher_id": {{teacher_id}},
+		"name": "test class"
 	}
 }
 
