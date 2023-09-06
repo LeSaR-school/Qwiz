@@ -21,11 +21,12 @@ pub fn all() -> Vec<Route> {
 
 
 #[get("/media")]
-fn media_info() -> &'static str {
+fn media_info() -> &'static str {	
 r#"
+enum MediaType ( "Image", "Video", "Audio", "Youtube", "Gif" )
+
 GET /media/<uuid> - get media data by uuid
 "#
-
 }
 
 

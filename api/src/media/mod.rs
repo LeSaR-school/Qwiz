@@ -19,6 +19,7 @@ pub enum MediaType {
 	Video,
 	Audio,
 	Youtube,
+	Gif,
 }
 impl MediaType {
 	pub fn to_file_extension(&self) -> &'static str {
@@ -29,6 +30,7 @@ impl MediaType {
 			Image => "png",
 			Video => "mp4",
 			Audio => "mp3",
+			Gif => "gif",
 			Youtube => "",
 		}
 
@@ -54,7 +56,7 @@ impl NewMediaData {
 		use MediaType::*;
 		use MediaError::*;
 
-		if !matches!(self.media_type, Image | Video | Audio) {
+		if !matches!(self.media_type, Image | Video | Audio | Gif) {
 			return Ok(self.data.to_owned())
 		}
 

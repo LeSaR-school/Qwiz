@@ -28,7 +28,6 @@ pub fn all() -> Vec<Route> {
 fn account_info() -> &'static str {
 r#"
 enum AccountType ( "Student", "Parent", "Teacher" )
-enum MediaType ( "Image", "Video", "Audio", "Youtube" )
 
 GET /account/<id> - get account data by id
 GET /account/<username> - get account data by username
