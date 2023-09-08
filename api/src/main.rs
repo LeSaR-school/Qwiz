@@ -3,6 +3,7 @@ mod qwiz;
 mod question;
 mod vote;
 mod class;
+mod assignment;
 mod media;
 mod crypto;
 
@@ -14,7 +15,7 @@ mod crypto;
 
 
 use crate::account::Account;
-use std::{str::FromStr, error::Error, env::var};
+use std::{str::FromStr, error::Error, env::var, ops::Deref};
 use rocket::{http::Status, Request, fs::{FileServer, relative}};
 use sqlx::{Pool, Postgres, postgres::{PgPoolOptions, PgConnectOptions}, ConnectOptions};
 use async_once::AsyncOnce;
@@ -54,6 +55,7 @@ async fn rocket() -> _ {
 	routes.append(&mut question::routes::all());
 	routes.append(&mut vote::routes::all());
 	routes.append(&mut class::routes::all());
+	routes.append(&mut assignment::routes::all());
 	routes.append(&mut media::routes::all());
 
 	rocket::build()
@@ -98,4 +100,24 @@ pub fn db_err_to_status(e: &sqlx::Error, status: Status) -> Status {
 		e => internal_err(e),
 	}
 
+}
+
+
+pub struct OptBool(pub bool);
+impl From<bool> for OptBool {
+	fn from(value: bool) -> Self {
+		Self(value)
+	}
+}
+impl From<Option<bool>> for OptBool {
+	fn from(value: Option<bool>) -> Self {
+		Self(value.unwrap_or(false))
+	}
+}
+impl Deref for OptBool {
+	type Target = bool;
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
 }

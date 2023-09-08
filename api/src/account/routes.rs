@@ -55,6 +55,9 @@ password: String - required
 
 GET /account/<id>/classes - get student/teacher account classes
 password: String - required
+
+GET /account/<id>/assignments - get student assignments
+password: String - required
 "#
 }
 

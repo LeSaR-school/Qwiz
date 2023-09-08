@@ -210,14 +210,13 @@ async fn delete_class(id: i32, delete_class_data: Json<DeleteClassData>) -> Eith
 
 
 
-
 #[derive(Deserialize)]
 struct GetClassesData {
 	password: String,
 }
 
-#[get("/account/<id>/classes", data = "<classes_data>")]
-async fn get_account_classes(id: i32, classes_data: Json<GetClassesData>) -> Result<Json<Vec<GetClassData>>, Either<Status, BadRequest<String>>> {
+#[get("/account/<id>/classes", data = "<get_classes_data>")]
+async fn get_account_classes(id: i32, get_classes_data: Json<GetClassesData>) -> Result<Json<Vec<GetClassData>>, Either<Status, BadRequest<String>>> {
 
 	use ClassError::*;
 
@@ -226,7 +225,7 @@ async fn get_account_classes(id: i32, classes_data: Json<GetClassesData>) -> Res
 		Err(e) => return Err(Left(db_err_to_status(&e, Status::NotFound))),
 	};
 
-	match account.verify_password(&classes_data.password).await {
+	match account.verify_password(&get_classes_data.password).await {
 		Ok(true) => (),
 		Ok(false) => return Err(Left(Status::Unauthorized)),
 		Err(e) => return Err(Left(internal_err(&e))),

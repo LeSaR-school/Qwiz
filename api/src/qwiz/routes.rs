@@ -1,8 +1,10 @@
 use crate::{BASE_URL, internal_err, db_err_to_status};
+use crate::assignment::Assignment;
 use crate::account::Account;
 use crate::qwiz::{Qwiz, QwizSolveError};
 use crate::question::{Question, NewQuestionData, routes::GetQuestionData, QuestionError};
 use crate::media::{Media, NewMediaData, routes::GetMediaData, MediaError};
+use crate::qwiz::NewQwizData;
 
 use rocket::{
 	http::Status,
@@ -12,8 +14,6 @@ use rocket::{
 	Either::{self, *},
 };
 use serde::{Deserialize, Serialize};
-
-use super::NewQwizData;
 
 
 
@@ -322,6 +322,7 @@ async fn delete_qwiz(id: i32, delete_qwiz_data: Json<DeleteQwizData>) -> Status 
 #[derive(Deserialize)]
 pub struct PostSolveQwizData {
 	pub answers: Vec<u8>,
+	username: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -329,22 +330,53 @@ struct SolveQwizData {
 	correct: u32,
 	total: u32,
 	results: Vec<bool>,
+	assignment_complete: Option<bool>,
 }
 
-#[post("/qwiz/<id>/solve", data = "<solve_qwiz_data>")]
-async fn solve_qwiz(id: i32, solve_qwiz_data: Json<PostSolveQwizData>) -> Result<Json<SolveQwizData>, Either<Status, BadRequest<&'static str>>> {
+#[post("/qwiz/<qwiz_id>/solve?<assignment_id>", data = "<solve_qwiz_data>")]
+async fn solve_qwiz(qwiz_id: i32, solve_qwiz_data: Json<PostSolveQwizData>, assignment_id: Option<i32>) -> Result<Json<SolveQwizData>, Either<Status, BadRequest<&'static str>>> {
 
 	use QwizSolveError::*;
 
-	let qwiz = match Qwiz::get_by_id(&id).await {
+	let qwiz = match Qwiz::get_by_id(&qwiz_id).await {
 		Ok(qwiz) => qwiz,
 		Err(e) => return Err(Left(db_err_to_status(&e, Status::NotFound))),
 	};
 
-	match qwiz.solve(&solve_qwiz_data.answers).await {
-		Ok(results) => Ok(Json(SolveQwizData { correct: results.iter().filter(|&r| *r == true).count() as u32, total: results.len() as u32, results: results })),
-		Err(Sqlx(e)) => Err(Left(internal_err(&e))),
-		Err(e) => Err(Right(BadRequest(Some(e.as_str())))),
-	}
+	let results = match qwiz.solve(&solve_qwiz_data.answers).await {
+		Ok(results) => results,
+		Err(Sqlx(e)) => return Err(Left(internal_err(&e))),
+		Err(e) => return Err(Right(BadRequest(Some(e.as_str())))),
+	};
+
+
+
+	match (assignment_id, &solve_qwiz_data.username) {
+		(Some(id), Some(username)) => {
+			
+			let student = match Account::get_by_username(username).await {
+				Ok(acc) => acc,
+				Err(e) => return Err(Left(db_err_to_status(&e, Status::NotFound))),
+			};
+			
+			let mut assignment = match Assignment::get_by_id(&id).await {
+				Ok(assignment) => assignment,
+				Err(e) => return Err(Left(db_err_to_status(&e, Status::NotFound))),
+			};
+
+			let solved = results.iter().all(|r| *r);
+
+			if solved {
+				if let Err(e) = assignment.complete_by_student_id(&student.id).await {
+					return Err(Left(internal_err(&e)))
+				}
+			}
+
+			Ok(Json(SolveQwizData { correct: results.iter().filter(|&r| *r == true).count() as u32, total: results.len() as u32, results, assignment_complete: Some(solved) }))
+
+		},
+		(Some(_), None) => Err(Right(BadRequest(Some("no username")))),
+		(_, _) => Ok(Json(SolveQwizData { correct: results.iter().filter(|&r| *r == true).count() as u32, total: results.len() as u32, results, assignment_complete: None })),
+ 	}
 
 }
