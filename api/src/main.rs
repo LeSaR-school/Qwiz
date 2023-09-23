@@ -6,6 +6,7 @@ mod class;
 mod assignment;
 mod media;
 mod crypto;
+mod live;
 
 
 
@@ -57,6 +58,7 @@ async fn rocket() -> _ {
 	routes.append(&mut class::routes::all());
 	routes.append(&mut assignment::routes::all());
 	routes.append(&mut media::routes::all());
+	routes.append(&mut live::routes::all());
 
 	rocket::build()
 		.register(BASE_URL, catchers![default_catcher])
@@ -86,9 +88,15 @@ r#"
 
 
 
-pub fn internal_err(e: &dyn Error) -> Status {
+pub fn log_err(e: &dyn Error) {
 
 	eprintln!("\x1b[0;31mERROR: {e}\x1b[0m");
+
+}
+
+pub fn internal_err(e: &dyn Error) -> Status {
+
+	log_err(e);
 	Status::InternalServerError
 
 }
@@ -101,6 +109,7 @@ pub fn db_err_to_status(e: &sqlx::Error, status: Status) -> Status {
 	}
 
 }
+
 
 
 pub struct OptBool(pub bool);

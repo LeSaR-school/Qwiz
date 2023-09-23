@@ -127,8 +127,6 @@ impl Account {
 		.map(|r| (r.id, r.username))
 		.unzip();
 
-		println!("Loaded ids and usernames:\n{db_ids:?}\n{db_usernames:?}");
-	
 		*IDS.lock().await = db_ids;
 		*USERNAMES.lock().await = db_usernames;
 

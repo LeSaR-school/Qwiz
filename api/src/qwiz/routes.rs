@@ -312,7 +312,7 @@ async fn delete_qwiz(id: i32, delete_qwiz_data: Json<DeleteQwizData>) -> Status 
 
 	match qwiz.delete().await {
 		Ok(_) => Status::Ok,
-		Err(e) => return internal_err(&e),
+		Err(e) => internal_err(&e),
 	}
 
 }
@@ -372,11 +372,11 @@ async fn solve_qwiz(qwiz_id: i32, solve_qwiz_data: Json<PostSolveQwizData>, assi
 				}
 			}
 
-			Ok(Json(SolveQwizData { correct: results.iter().filter(|&r| *r == true).count() as u32, total: results.len() as u32, results, assignment_complete: Some(solved) }))
+			Ok(Json(SolveQwizData { correct: results.iter().filter(|&r| *r).count() as u32, total: results.len() as u32, results, assignment_complete: Some(solved) }))
 
 		},
 		(Some(_), None) => Err(Right(BadRequest(Some("no username")))),
-		(_, _) => Ok(Json(SolveQwizData { correct: results.iter().filter(|&r| *r == true).count() as u32, total: results.len() as u32, results, assignment_complete: None })),
+		(_, _) => Ok(Json(SolveQwizData { correct: results.iter().filter(|&r| *r).count() as u32, total: results.len() as u32, results, assignment_complete: None })),
  	}
 
 }

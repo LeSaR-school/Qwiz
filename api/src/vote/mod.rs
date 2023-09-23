@@ -46,7 +46,7 @@ impl Vote {
 
 	pub async fn get_by_voter_id_qwiz_id(voter_id: &i32, qwiz_id: &i32) -> Result<Option<Self>, VoteError> {
 
-		match Qwiz::exists(&qwiz_id).await {
+		match Qwiz::exists(qwiz_id).await {
 			Ok(true) => (),
 			Ok(false) => return Err(VoteError::QwizNotFound),
 			Err(e) => return Err(VoteError::Sqlx(e)),
@@ -65,7 +65,7 @@ impl Vote {
 	}
 	pub async fn get_all_by_qwiz_id(qwiz_id: &i32) -> Result<Vec<Self>, VoteError> {
 		
-		match Qwiz::exists(&qwiz_id).await {
+		match Qwiz::exists(qwiz_id).await {
 			Ok(true) => (),
 			Ok(false) => return Err(VoteError::QwizNotFound),
 			Err(e) => return Err(VoteError::Sqlx(e)),

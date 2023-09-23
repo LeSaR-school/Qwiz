@@ -66,15 +66,15 @@ impl From<MediaError> for QuestionError {
 
 #[derive(Serialize)]
 pub struct Question {
-	qwiz_id: i32,
+	pub qwiz_id: i32,
 	index: i32,
-	body: String,
-	answer1: String,
-	answer2: String,
-	answer3: Option<String>,
-	answer4: Option<String>,
+	pub body: String,
+	pub answer1: String,
+	pub answer2: String,
+	pub answer3: Option<String>,
+	pub answer4: Option<String>,
 	correct: i16,
-	embed_uuid: Option<Uuid>,
+	pub embed_uuid: Option<Uuid>,
 }
 
 impl Question {
