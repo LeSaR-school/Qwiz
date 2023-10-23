@@ -10,6 +10,8 @@ use rocket::response::status::Created;
 use rocket::serde::json::Json;
 use serde::{Serialize, Deserialize};
 
+use super::StartLiveQwizError;
+
 
 
 pub fn all() -> Vec<Route> {
@@ -17,6 +19,7 @@ pub fn all() -> Vec<Route> {
 	routes![
 		state,
 		create,
+		start,
 		add_participants,
 		remove_participants,
 	]
@@ -102,7 +105,7 @@ impl GetLiveQwizData {
 #[get("/live/<id>")]
 async fn state(id: u16) -> Result<Json<GetLiveQwizData>, Status> {
 
-	match LiveQwiz::get_data(&id).await {
+	match LiveQwiz::get_data(id).await {
 		Some(data) => Ok(Json(data)),
 		None => Err(Status::NotFound),
 	}
@@ -134,12 +137,42 @@ async fn create(live_qwiz_data: Json<PostLiveQwizData>) -> Result<Created<String
 	}
 
 	match LiveQwiz::new(host.id, live_qwiz_data.qwiz_id, &live_qwiz_data.options).await {
-		Ok(lq) => Ok(Created::new(format!("{BASE_URL}/live/{}", lq.id))),
+		Ok(id) => Ok(Created::new(format!("{BASE_URL}/live/{}", id))),
 		Err(e) => Err(internal_err(&e)),
 	}
 
 }
 
+
+
+#[derive(Deserialize)]
+struct StartLiveQwizData {
+	username: String,
+	password: String,
+}
+
+#[post("/live/<id>/start", data = "<start_live_qwiz_data>")]
+async fn start(id: u16, start_live_qwiz_data: Json<StartLiveQwizData>) -> Status {
+
+	let mut host = match Account::get_by_username(&start_live_qwiz_data.username).await {
+		Ok(acc) => acc,
+		Err(e) => return db_err_to_status(&e, Status::Unauthorized),
+	};
+
+	match host.verify_password(&start_live_qwiz_data.password).await {
+		Ok(true) => (),
+		Ok(false) => return Status::Unauthorized,
+		Err(e) => return internal_err(&e),
+	}
+
+	match LiveQwiz::start(id).await {
+		Ok(_) => Status::Ok,
+		Err(StartLiveQwizError::LiveQwiz(LiveQwizError::Sqlx(e))) => internal_err(&e),
+		Err(StartLiveQwizError::LiveQwiz(LiveQwizError::QwizNotFound(_))) => Status::NotFound,
+		Err(StartLiveQwizError::QwizAlreadyStarted) => Status::BadRequest,
+	}
+
+}
 
 
 #[derive(Deserialize)]
@@ -160,7 +193,7 @@ async fn add_participants(id: u16, put_participants_data: Json<PutParticipantsDa
 
 	use LiveQwizError::*;
 
-	let host_id = match LiveQwiz::get_data(&id).await {
+	let host_id = match LiveQwiz::get_data(id).await {
 		Some(lq) => lq.host_id,
 		None => return Status::NotFound,
 	};
@@ -180,7 +213,7 @@ async fn add_participants(id: u16, put_participants_data: Json<PutParticipantsDa
 		Err(e) => return internal_err(&e),
 	}
 
-	match LiveQwiz::add_participants(&id, &put_participants_data.participants).await {
+	match LiveQwiz::add_participants(id, &put_participants_data.participants).await {
 		Ok(_) => Status::Ok,
 		Err(QwizNotFound(_)) => Status::NotFound,
 		Err(Sqlx(e)) => internal_err(&e),
@@ -202,7 +235,7 @@ async fn remove_participants(id: u16, delete_participants_data: Json<DeleteParti
 	
 	use LiveQwizError::*;
 
-	let host_id = match LiveQwiz::get_data(&id).await {
+	let host_id = match LiveQwiz::get_data(id).await {
 		Some(lq) => lq.host_id,
 		None => return Status::NotFound,
 	};
@@ -222,7 +255,7 @@ async fn remove_participants(id: u16, delete_participants_data: Json<DeleteParti
 		Err(e) => return internal_err(&e),
 	}
 
-	match LiveQwiz::remove_participants(&id, &delete_participants_data.participant_ids).await {
+	match LiveQwiz::remove_participants(id, &delete_participants_data.participant_ids).await {
 		Ok(_) => Status::Ok,
 		Err(QwizNotFound(_)) => Status::NotFound,
 		Err(Sqlx(e)) => internal_err(&e),

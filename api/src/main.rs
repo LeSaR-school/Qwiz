@@ -16,7 +16,8 @@ mod live;
 
 
 use crate::account::Account;
-use std::{str::FromStr, error::Error, env::var, ops::Deref};
+use core::fmt;
+use std::{str::FromStr, env::var, ops::Deref};
 use rocket::{http::Status, Request, fs::{FileServer, relative}};
 use sqlx::{Pool, Postgres, postgres::{PgPoolOptions, PgConnectOptions}, ConnectOptions};
 use async_once::AsyncOnce;
@@ -88,13 +89,13 @@ r#"
 
 
 
-pub fn log_err(e: &dyn Error) {
+pub fn log_err(e: &dyn fmt::Display) {
 
 	eprintln!("\x1b[0;31mERROR: {e}\x1b[0m");
 
 }
 
-pub fn internal_err(e: &dyn Error) -> Status {
+pub fn internal_err(e: &dyn fmt::Display) -> Status {
 
 	log_err(e);
 	Status::InternalServerError
