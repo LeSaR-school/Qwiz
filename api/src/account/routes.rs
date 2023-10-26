@@ -1,6 +1,6 @@
-use crate::BASE_URL;
+use crate::media::MediaError;
+use crate::{BASE_URL, internal_err, db_err_to_status};
 use crate::account::{Account, AccountType, AccountError, NewAccountError};
-use crate::class::{Class, ClassError, routes::GetClassData};
 use crate::media::{Media, NewMediaData, routes::GetMediaData};
 use rocket::response::status::{BadRequest, Created};
 use rocket::{Route, Either::{self, *}};
@@ -18,7 +18,6 @@ pub fn all() -> Vec<Route> {
 		create_account,
 		update_account,
 		delete_account,
-		get_account_classes,
 	]
 
 }
@@ -29,7 +28,6 @@ pub fn all() -> Vec<Route> {
 fn account_info() -> &'static str {
 r#"
 enum AccountType ( "Student", "Parent", "Teacher" )
-enum MediaType ( "Image", "Video", "Audio", "Youtube" )
 
 GET /account/<id> - get account data by id
 GET /account/<username> - get account data by username
@@ -56,6 +54,9 @@ DELETE /account/<id> - delete account
 password: String - required
 
 GET /account/<id>/classes - get student/teacher account classes
+password: String - required
+
+GET /account/<id>/assignments - get student assignments
 password: String - required
 "#
 }
@@ -90,12 +91,7 @@ async fn get_account_by_id(id: i32) -> Result<Json<GetAccountData>, Status> {
 
 	match Account::get_by_id(&id).await {
 		Ok(account) => Ok(Json(GetAccountData::from_account(account).await)),
-		Err(e) => {
-			
-			eprintln!("{e}");
-			Err(Status::NotFound)
-
-		},
+		Err(e) => Err(db_err_to_status(&e, Status::NotFound)),
 	}
 	
 }
@@ -105,12 +101,7 @@ async fn get_account_by_username(username: String) -> Result<Json<GetAccountData
 
 	match Account::get_by_username(&username).await {
 		Ok(account) => Ok(Json(GetAccountData::from_account(account).await)),
-		Err(e) => {
-			
-			eprintln!("{e}");
-			Err(Status::NotFound)
-
-		},
+		Err(e) => Err(db_err_to_status(&e, Status::NotFound)),
 	}
 
 }
@@ -133,18 +124,8 @@ async fn create_account(account_data: Json<PostAccountData>) -> Result<Created<S
 
 	match Account::new(&account_data.username, &account_data.password, &account_data.account_type, &account_data.profile_picture).await {
 		Ok(account) => Ok(Created::new(format!("{BASE_URL}/account/{}", account.id))),
-		Err(Base(Sqlx(e))) => {
-			
-			eprintln!("{e}");
-			Err(Left(Status::InternalServerError))
-
-		},
-		Err(Base(IO(e))) => {
-
-			eprintln!("{e}");
-			Err(Left(Status::InternalServerError))
-
-		},
+		Err(Base(Sqlx(e))) => Err(Left(internal_err(&e))),
+		Err(Base(IO(e))) => Err(Left(internal_err(&e))),
 		Err(e) => Err(Right(BadRequest(Some(e.to_string())))),
 	}
 
@@ -166,57 +147,39 @@ async fn update_account(id: i32, new_account_data: Json<PatchAccountData>) -> Re
 	
 	let mut account = match Account::get_by_id(&id).await {
 		Ok(acc) => acc,
-		Err(e) => {
-			
-			eprintln!("{e}");
-			return Err(Left(Status::NotFound))
-			
-		},
+		Err(e) => return Err(Left(db_err_to_status(&e, Status::NotFound))),
 	};
 	
 	match account.verify_password(&new_account_data.password).await {
 		Ok(true) => (),
 		Ok(false) => return Err(Left(Status::Unauthorized)),
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Err(Left(Status::InternalServerError))
-
-		},
+		Err(e) => return Err(Left(internal_err(&e))),
 	}
 
 
 	
 	if let Some(new_account_type) = &new_account_data.new_account_type {
 		if account.update_account_type(new_account_type).await.is_err() {
-			return Err(Right(BadRequest(Some("Bad account type"))));
+			return Err(Right(BadRequest(Some("bad account type"))));
 		}
 	}
 	
 	if let Some(new_password) = &new_account_data.new_password {
-		if account.update_password(new_password).await.is_err() {
-			return Err(Right(BadRequest(Some("Bad password"))));
+		match account.update_password(new_password).await {
+			Ok(true) => (),
+			Ok(false) => return Err(Right(BadRequest(Some("bad password")))),
+			Err(e) => return Err(Left(internal_err(&e))),
 		}
 	}
 	
 	if let Some(new_profile_picture) = &new_account_data.new_profile_picture {
-		use AccountError::*;
+		use MediaError::*;
 		
 		match account.update_profile_picture(new_profile_picture).await {
 			Ok(_) => (),
-			Err(Sqlx(e)) => {
-				
-				eprintln!("{e}");
-				return Err(Left(Status::InternalServerError))
-
-			},
-			Err(Base64(_)) => return Err(Right(BadRequest(Some("Bad thumbnail base64")))),
-			Err(IO(e)) => {
-				
-				eprintln!("{e}");
-				return Err(Left(Status::InternalServerError))
-
-			},
+			Err(Sqlx(e)) => return Err(Left(internal_err(&e))),
+			Err(Base64(_)) => return Err(Right(BadRequest(Some("bad profile picture base64")))),
+			Err(IO(e)) => return Err(Left(internal_err(&e))),
 		}
 	}
 
@@ -240,127 +203,20 @@ async fn delete_account(id: i32, delete_account_data: Json<DeleteAccountData>) -
 
 	let mut account = match Account::get_by_id(&id).await {
 		Ok(acc) => acc,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Status::InternalServerError
-
-		},
+		Err(e) => return internal_err(&e),
 	};
 
 	match account.verify_password(&delete_account_data.password).await {
 		Ok(true) => (),
 		Ok(false) => return Status::Unauthorized,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Status::InternalServerError
-			
-		},
+		Err(e) => return internal_err(&e),
 	}
 
 
 
 	match account.delete().await {
 		Ok(_) => Status::Ok,
-		Err(e) => {
-
-			eprintln!("{e}");
-			Status::InternalServerError
-			
-		},
+		Err(e) => internal_err(&e),
 	}
-
-}
-
-
-
-#[derive(Deserialize)]
-struct GetClassesData {
-	password: String,
-}
-
-#[get("/account/<id>/classes", data = "<classes_data>")]
-async fn get_account_classes(id: i32, classes_data: Json<GetClassesData>) -> Result<Json<Vec<GetClassData>>, Either<Status, BadRequest<String>>> {
-
-	use ClassError::*;
-
-	let mut account = match Account::get_by_id(&id).await {
-		Ok(acc) => acc,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Err(Left(Status::NotFound))
-			
-		},
-	};
-
-	match account.verify_password(&classes_data.password).await {
-		Ok(true) => (),
-		Ok(false) => return Err(Left(Status::Unauthorized)),
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Err(Left(Status::InternalServerError))
-			
-		},
-	}
-
-
-
-	let classes = match Class::get_all_by_student_id(&id).await {
-		Ok(classes) => classes,
-		Err(NotAStudent(_)) => {
-					
-			match Class::get_all_by_teacher_id(&id).await {
-				Ok(classes) => classes,
-				Err(Sqlx(e)) => {
-
-					eprintln!("{e}");
-					return Err(Left(Status::InternalServerError))
-
-				},
-				Err(NotAStudent(id)) => {
-					return Err(Right(BadRequest(Some(format!("Account with id {id} is neither a teacher nor a student")))))
-				},
-				Err(e) => {
-			
-					eprintln!("unreachable, {}", e.to_string());
-					return Err(Left(Status::InternalServerError))
-		
-				},
-			}
-
-		},
-		Err(Sqlx(e)) => {
-
-			eprintln!("{e}");
-			return Err(Left(Status::InternalServerError))
-
-		},
-		Err(AccountNotFound(_)) => return Err(Left(Status::NotFound)),
-		Err(NotATeacher(id)) => {
-			
-			eprintln!("unreachable, {id}");
-			return Err(Left(Status::InternalServerError))
-
-		},
-	};
-
-	let mut class_datas: Vec<GetClassData> = Vec::new();
-
-	for class in classes {
-		match GetClassData::from_class(class).await {
-			Ok(data) => class_datas.push(data),
-			Err(e) => {
-
-				eprintln!("{e}");
-				return Err(Left(Status::InternalServerError))
-
-			}
-		}
-	}
-
-	Ok(Json(class_datas))
 
 }

@@ -173,7 +173,7 @@ impl Class {
 	
 	pub async fn add_students(&self, new_student_ids: &Vec<i32>) -> Result<(), ClassError> {
 
-		if new_student_ids.len() == 0 {
+		if new_student_ids.is_empty() {
 			return Ok(())
 		}
 

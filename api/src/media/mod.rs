@@ -19,9 +19,10 @@ pub enum MediaType {
 	Video,
 	Audio,
 	Youtube,
+	Gif,
 }
 impl MediaType {
-	pub fn to_file_extension(&self) -> &'static str {
+	pub fn get_file_extension(&self) -> &'static str {
 
 		use MediaType::*;
 
@@ -29,6 +30,7 @@ impl MediaType {
 			Image => "png",
 			Video => "mp4",
 			Audio => "mp3",
+			Gif => "gif",
 			Youtube => "",
 		}
 
@@ -54,12 +56,12 @@ impl NewMediaData {
 		use MediaType::*;
 		use MediaError::*;
 
-		if !matches!(self.media_type, Image | Video | Audio) {
+		if !matches!(self.media_type, Image | Video | Audio | Gif) {
 			return Ok(self.data.to_owned())
 		}
 
 		let uuid = Uuid::new_v4();
-		let path_str = format!("{}/media/{uuid}.{}", env!("CARGO_MANIFEST_DIR"), self.media_type.to_file_extension());
+		let path_str = format!("{}/media/{uuid}.{}", env!("CARGO_MANIFEST_DIR"), self.media_type.get_file_extension());
 		let path = Path::new(&path_str);
 		
 		match general_purpose::STANDARD.decode(&self.data) {
@@ -72,7 +74,7 @@ impl NewMediaData {
 				{
 					Ok(mut file) => {
 						match file.write_all(&binary) {
-							Ok(_) => Ok(format!("{BASE_URL}/media/upload/{uuid}.{}", self.media_type.to_file_extension())),
+							Ok(_) => Ok(format!("{BASE_URL}/media/upload/{uuid}.{}", self.media_type.get_file_extension())),
 							Err(e) => Err(IO(e)),
 						}
 					},
@@ -165,7 +167,7 @@ impl Media {
 	pub async fn from_media_datas(media_datas: Vec<&Option<NewMediaData>>) -> Result<Vec<Option<Self>>, MediaError> {
 
 		let uris = Self::upload_multiple(media_datas.iter().flat_map(|d| *d).collect()).await?;
-		let media_types: Vec<MediaType> = media_datas.iter().flat_map(|d| *d).map(|d| d.media_type.clone()).collect();
+		let media_types: Vec<MediaType> = media_datas.iter().flat_map(|d| *d).map(|d| d.media_type).collect();
 
 		let mut medias = sqlx::query_as!(
 			Media,

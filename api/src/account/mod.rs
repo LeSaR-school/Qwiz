@@ -127,8 +127,6 @@ impl Account {
 		.map(|r| (r.id, r.username))
 		.unzip();
 
-		println!("Loaded ids and usernames:\n{db_ids:?}\n{db_usernames:?}");
-	
 		*IDS.lock().await = db_ids;
 		*USERNAMES.lock().await = db_usernames;
 
@@ -196,13 +194,12 @@ impl Account {
 	
 	pub async fn new(username: &String, password: &String, account_type: &AccountType, profile_picture: &Option<NewMediaData>) -> Result<Self, NewAccountError> {
 
-		// TODO: username and password filter
-		// if () {
-		// 	return Err(NewAccountError::InvalidUsername);
-		// }
-		// if () {
-		// 	return Err(NewAccountError::InvalidPassword)
-		// }
+		if !crypto::validate_username(username) {
+			return Err(NewAccountError::InvalidUsername);
+		}
+		if !crypto::validate_password(password) {
+			return Err(NewAccountError::InvalidPassword)
+		}
 
 		if Self::exists_username(username).await {
 			return Err(NewAccountError::UsernameTaken)
@@ -235,7 +232,11 @@ impl Account {
 	
 	}
 
-	pub async fn update_password(&mut self, new_password: &String) -> sqlx::Result<()> {
+	pub async fn update_password(&mut self, new_password: &String) -> sqlx::Result<bool> {
+
+		if !crypto::validate_password(new_password) {
+			return Ok(false)
+		}
 
 		let password_hash = crypto::encode_password(new_password);
 
@@ -248,7 +249,7 @@ impl Account {
 		.await?
 		.password_hash;
 
-		Ok(())
+		Ok(true)
 
 	}
 	pub async fn update_account_type(&mut self, new_account_type: &AccountType) -> sqlx::Result<()> {
@@ -265,7 +266,7 @@ impl Account {
 		Ok(())
 
 	}
-	pub async fn update_profile_picture(&mut self, new_profile_picture: &NewMediaData) -> Result<(), AccountError> {
+	pub async fn update_profile_picture(&mut self, new_profile_picture: &NewMediaData) -> Result<(), MediaError> {
 
 		match self.profile_picture_uuid {
 			Some(uuid) => Media::get_by_uuid(&uuid).await?.update(new_profile_picture).await?,
@@ -308,7 +309,7 @@ impl Account {
 
 
 
-	pub async fn verify_password(&mut self, password: &String) -> Result<bool, sqlx::Error> {
+	pub async fn verify_password(&mut self, password: &String) -> sqlx::Result<bool, sqlx::Error> {
 
 		match crypto::verify_password(password, &self.password_hash).await {
 			Ok(true) => self.update_password(password).await.map(|_| true),

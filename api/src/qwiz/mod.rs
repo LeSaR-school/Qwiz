@@ -3,10 +3,12 @@ pub mod routes;
 
 
 use crate::POOL;
+use crate::qwiz::routes::GetShortQwizData;
 use crate::media::{Media, NewMediaData, MediaError};
+use std::cmp::Ordering;
 use std::fmt::Display;
 use serde::Deserialize;
-use sqlx::types::Uuid;
+use sqlx::types::{Uuid, chrono::NaiveDateTime};
 
 
 
@@ -53,13 +55,30 @@ impl From<std::io::Error> for QwizError {
 		Self::IO(value)
 	}
 }
-impl From<MediaError> for QwizError {
-	fn from(value: MediaError) -> Self {
-		
-		match value {
-			MediaError::Sqlx(e) => QwizError::Sqlx(e),
-			MediaError::Base64(e) => QwizError::Base64(e),
-			MediaError::IO(e) => QwizError::IO(e),
+
+
+
+pub enum QwizSolveError {
+	Sqlx(sqlx::Error),
+	InvalidAnswer,
+	NotEnoughAnswers,
+	TooManyAnswers,
+}
+impl From<sqlx::Error> for QwizSolveError {
+	fn from(value: sqlx::Error) -> Self {
+		Self::Sqlx(value)
+	}
+}
+impl QwizSolveError {
+	fn as_str(&self) -> &'static str {
+
+		use QwizSolveError::*;
+
+		match self {
+			Sqlx(_) => "sqlx error",
+			InvalidAnswer => "bad answer (greater than 4)",
+			TooManyAnswers => "too many answers",
+			NotEnoughAnswers => "not enough answers",
 		}
 
 	}
@@ -73,6 +92,7 @@ pub struct Qwiz {
 	pub creator_id: i32,
 	thumbnail_uuid: Option<Uuid>,
 	public: bool,
+	create_time: NaiveDateTime,
 }
 
 impl Qwiz {
@@ -101,7 +121,7 @@ impl Qwiz {
 	
 	}
 
-	pub async fn from_qwiz_data(data: &NewQwizData) -> Result<Self, QwizError> {
+	pub async fn from_qwiz_data(data: &NewQwizData) -> Result<Self, MediaError> {
 
 		// check if creator uuid exists
 		sqlx::query!(
@@ -157,7 +177,7 @@ impl Qwiz {
 		Ok(())
 
 	}
-	pub async fn update_thumbnail(&mut self, new_thumbnail: &NewMediaData) -> Result<(), QwizError> {
+	pub async fn update_thumbnail(&mut self, new_thumbnail: &NewMediaData) -> Result<(), MediaError> {
 
 		match self.thumbnail_uuid {
 			Some(uuid) => Media::get_by_uuid(&uuid).await?.update(new_thumbnail).await?,
@@ -179,6 +199,95 @@ impl Qwiz {
 		};
 
 		Ok(())
+
+	}
+
+
+
+	pub async fn get_best(page: i64) -> sqlx::Result<Vec<GetShortQwizData>> {
+
+		sqlx::query_as!(
+			GetShortQwizData,
+			r#"SELECT id, name,
+			(SELECT uri FROM media WHERE uuid=thumbnail_uuid) AS thumbnail_uri,
+			(SELECT COUNT(*) FROM vote WHERE qwiz_id=id) AS votes,
+			(SELECT username FROM account WHERE id=creator_id) AS creator_name,
+			(SELECT uri FROM media WHERE uuid=(SELECT profile_picture_uuid FROM account WHERE id=creator_id)) as creator_profile_picture_uri,
+			CAST(EXTRACT(EPOCH FROM create_time) * 1000 AS BIGINT) AS create_time
+			FROM qwiz WHERE public
+			ORDER BY votes LIMIT 50 OFFSET $1"#,
+			page * 50,
+		)
+		.fetch_all(POOL.get().await)
+		.await
+
+	}
+
+	pub async fn get_by_name(name: &String, page: i64) -> sqlx::Result<Vec<GetShortQwizData>> {
+		
+		sqlx::query_as!(
+			GetShortQwizData,
+			r#"SELECT id, name,
+			(SELECT uri FROM media WHERE uuid=thumbnail_uuid) AS thumbnail_uri,
+			(SELECT COUNT(*) FROM vote WHERE qwiz_id=id) AS votes,
+			(SELECT username FROM account WHERE id=creator_id) AS creator_name,
+			(SELECT uri FROM media WHERE uuid=(SELECT profile_picture_uuid FROM account WHERE id=creator_id)) as creator_profile_picture_uri,
+			CAST(EXTRACT(EPOCH FROM create_time) * 1000 AS BIGINT) AS create_time
+			FROM qwiz WHERE public AND name LIKE $1
+			ORDER BY votes LIMIT 50 OFFSET $2"#,
+			format!("{name}%"),
+			page * 50,
+		)
+		.fetch_all(POOL.get().await)
+		.await
+
+	}
+
+	pub async fn get_recent(days: u16, page: i64) -> sqlx::Result<Vec<GetShortQwizData>> {
+
+		sqlx::query_as!(
+			GetShortQwizData,
+			r#"SELECT id, name,
+			(SELECT uri FROM media WHERE uuid=thumbnail_uuid) AS thumbnail_uri,
+			(SELECT COUNT(*) FROM vote WHERE qwiz_id=id) AS votes,
+			(SELECT username FROM account WHERE id=creator_id) AS creator_name,
+			(SELECT uri FROM media WHERE uuid=(SELECT profile_picture_uuid FROM account WHERE id=creator_id)) as creator_profile_picture_uri,
+			CAST(EXTRACT(EPOCH FROM create_time AT TIME ZONE 'UTC') * 1000 AS BIGINT) AS create_time
+			FROM qwiz WHERE public AND create_time >= (NOW() - MAKE_INTERVAL(days => $1))
+			ORDER BY votes LIMIT 50 OFFSET $2"#,
+			days as i32,
+			page * 50,
+		)
+		.fetch_all(POOL.get().await)
+		.await
+
+	}
+
+
+
+	pub async fn solve(&self, answers: &Vec<u8>) -> Result<Vec<bool>, QwizSolveError> {
+
+		use Ordering::*;
+		
+		if answers.iter().any(|a| *a > 4) {
+			return Err(QwizSolveError::InvalidAnswer)
+		}
+
+		let correct: Vec<u8> = sqlx::query!(
+			"SELECT correct FROM question WHERE qwiz_id=$1 ORDER BY index",
+			self.id
+		)
+		.fetch_all(POOL.get().await)
+		.await?
+		.into_iter()
+		.map(|r| r.correct as u8)
+		.collect();
+
+		match answers.len().cmp(&correct.len()) {
+			Greater => Err(QwizSolveError::TooManyAnswers),
+			Less => Err(QwizSolveError::NotEnoughAnswers),
+			Equal => Ok(correct.into_iter().zip(answers).map(|answers| answers.0 == *answers.1).collect())
+		}
 
 	}
 

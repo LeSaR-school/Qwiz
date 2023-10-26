@@ -50,11 +50,13 @@ impl From<sqlx::Error> for QuestionError {
 }
 impl From<MediaError> for QuestionError {
 	fn from(value: MediaError) -> Self {
-		
+
+		use MediaError::*;
+
 		match value {
-			MediaError::Sqlx(e) => QuestionError::Sqlx(e),
-			MediaError::Base64(e) => QuestionError::Base64(e),
-			MediaError::IO(e) => QuestionError::IO(e),
+			Sqlx(e) => QuestionError::Sqlx(e),
+			Base64(e) => QuestionError::Base64(e),
+			IO(e) => QuestionError::IO(e),
 		}
 
 	}
@@ -64,15 +66,15 @@ impl From<MediaError> for QuestionError {
 
 #[derive(Serialize)]
 pub struct Question {
-	qwiz_id: i32,
+	pub qwiz_id: i32,
 	index: i32,
-	body: String,
-	answer1: String,
-	answer2: String,
-	answer3: Option<String>,
-	answer4: Option<String>,
+	pub body: String,
+	pub answer1: String,
+	pub answer2: String,
+	pub answer3: Option<String>,
+	pub answer4: Option<String>,
 	correct: i16,
-	embed_uuid: Option<Uuid>,
+	pub embed_uuid: Option<Uuid>,
 }
 
 impl Question {
@@ -387,11 +389,11 @@ impl Question {
 		Ok(true)
 
 	}
-	pub async fn update_correct(&mut self, new_correct: &i16) -> sqlx::Result<()> {
+	pub async fn update_correct(&mut self, new_correct: &u8) -> sqlx::Result<()> {
 
 		self.correct = sqlx::query!(
 			"UPDATE question SET correct=$1 WHERE qwiz_id=$2 AND index=$3 RETURNING correct",
-			new_correct,
+			*new_correct as i16,
 			self.qwiz_id,
 			self.index,
 		)
