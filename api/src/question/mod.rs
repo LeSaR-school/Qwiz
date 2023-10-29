@@ -73,7 +73,7 @@ pub struct Question {
 	pub answer2: String,
 	pub answer3: Option<String>,
 	pub answer4: Option<String>,
-	correct: i16,
+	pub correct: i16,
 	pub embed_uuid: Option<Uuid>,
 }
 
