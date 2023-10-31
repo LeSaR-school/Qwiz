@@ -37,7 +37,29 @@ GET {{base_url}}/-1
 GET {{base_url}}/{{id}}
 
 ### get by username
-GET {{base_url}}/{{username}}
+POST {{base_url}}/{{username}}
+
+### invalid verify password - username
+POST {{base_url}}/verify
+
+{
+	"username": "1",
+	"password": "{{password}}"
+}
+### invalid verify password - password
+POST {{base_url}}/verify
+
+{
+	"username": "{{username}}",
+	"password": "1"
+}
+### verify password
+GET {{base_url}}/verify
+
+{
+	"username": "{{username}}",
+	"password": "{{password}}"
+}
 
 ### invalid get classes - password
 GET {{base_url}}/{{id}}/classes

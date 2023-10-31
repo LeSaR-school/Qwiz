@@ -15,6 +15,7 @@ pub fn all() -> Vec<Route> {
 		account_info,
 		get_account_by_id,
 		get_account_by_username,
+		verify_password,
 		create_account,
 		update_account,
 		delete_account,
@@ -107,6 +108,26 @@ async fn get_account_by_username(username: String) -> Result<Json<GetAccountData
 }
 
 
+
+#[derive(Deserialize)]
+struct VerifyPasswordData {
+	username: String,
+	password: String,
+}
+
+#[post("/account/verify", data = "<account_data>")]
+async fn verify_password(account_data: Json<VerifyPasswordData>) -> Status {
+	match Account::get_by_username(&account_data.username).await {
+		Ok(mut account) => {
+			match account.verify_password(&account_data.password).await {
+				Ok(true) => Status::Ok,
+				Ok(false) => Status::Unauthorized,
+				Err(e) => internal_err(&e),
+			}
+		},
+		Err(e) => db_err_to_status(&e, Status::NotFound),
+	}
+}
 
 #[derive(Deserialize)]
 struct PostAccountData {
