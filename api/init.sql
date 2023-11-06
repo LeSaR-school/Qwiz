@@ -51,7 +51,8 @@ CREATE TYPE public.media_type AS ENUM (
     'image',
     'video',
     'audio',
-    'youtube'
+    'youtube',
+    'gif'
 );
 
 
@@ -222,11 +223,11 @@ SET default_table_access_method = heap;
 --
 
 CREATE TABLE public.account (
-    id integer NOT NULL,
     username character varying(20) NOT NULL,
     password_hash character(128) NOT NULL,
     profile_picture_uuid uuid,
-    account_type public.account_type NOT NULL
+    account_type public.account_type NOT NULL,
+    id integer NOT NULL
 );
 
 
@@ -251,11 +252,11 @@ ALTER TABLE public.account ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
 --
 
 CREATE TABLE public.assignment (
-    id integer NOT NULL,
     qwiz_id integer NOT NULL,
     class_id integer NOT NULL,
     open_time timestamp without time zone,
-    close_time timestamp without time zone
+    close_time timestamp without time zone,
+    id integer NOT NULL
 );
 
 
@@ -280,9 +281,9 @@ ALTER TABLE public.assignment ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
 --
 
 CREATE TABLE public.class (
-    id integer NOT NULL,
     teacher_id integer NOT NULL,
-    name character varying(100) NOT NULL
+    name character varying(100) NOT NULL,
+    id integer NOT NULL
 );
 
 
@@ -354,12 +355,12 @@ ALTER TABLE public.question OWNER TO qwiz;
 --
 
 CREATE TABLE public.qwiz (
-    id integer NOT NULL,
     name character varying(100) NOT NULL,
     creator_id integer NOT NULL,
     thumbnail_uuid uuid,
     public boolean DEFAULT true NOT NULL,
-    create_time timestamp without time zone DEFAULT (now() AT TIME ZONE 'UTC'::text) NOT NULL
+    create_time timestamp without time zone DEFAULT (now() AT TIME ZONE 'UTC'::text) NOT NULL,
+    id integer NOT NULL
 );
 
 
