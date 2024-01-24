@@ -54,8 +54,9 @@ student_ids: Vec<i32> - required
 #[derive(Serialize)]
 pub struct GetClassData {
 	id: i32,
-	teacher_id: i32,
 	name: String,
+	teacher_id: i32,
+	teacher_name: String,
 	student_ids: Vec<i32>,
 }
 impl GetClassData {
@@ -63,10 +64,11 @@ impl GetClassData {
 	pub async fn from_class(class: Class) -> sqlx::Result<Self> {
 		Ok(
 			Self {
-				id: class.id,
-				teacher_id: class.teacher_id,
 				student_ids: class.get_all_students().await?,
+				id: class.id,
 				name: class.name,
+				teacher_id: class.teacher_id,
+				teacher_name: class.teacher_name.unwrap_or("None".to_owned()),
 			}
 		)
 	}
@@ -215,7 +217,7 @@ struct GetClassesData {
 	password: String,
 }
 
-#[get("/account/<id>/classes", data = "<get_classes_data>")]
+#[post("/account/<id>/classes", data = "<get_classes_data>")]
 async fn get_account_classes(id: i32, get_classes_data: Json<GetClassesData>) -> Result<Json<Vec<GetClassData>>, Either<Status, BadRequest<String>>> {
 
 	use ClassError::*;
@@ -229,7 +231,7 @@ async fn get_account_classes(id: i32, get_classes_data: Json<GetClassesData>) ->
 		Ok(true) => (),
 		Ok(false) => return Err(Left(Status::Unauthorized)),
 		Err(e) => return Err(Left(internal_err(&e))),
-	}
+	};
 
 
 

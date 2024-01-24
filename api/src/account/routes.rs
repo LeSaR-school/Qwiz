@@ -1,5 +1,5 @@
 use crate::media::MediaError;
-use crate::{BASE_URL, internal_err, db_err_to_status};
+use crate::{internal_err, db_err_to_status};
 use crate::account::{Account, AccountType, AccountError, NewAccountError};
 use crate::media::{Media, NewMediaData, routes::GetMediaData};
 use rocket::response::status::{BadRequest, Created};
@@ -15,7 +15,8 @@ pub fn all() -> Vec<Route> {
 		account_info,
 		get_account_by_id,
 		get_account_by_username,
-		verify_password,
+		verify_password_by_id,
+		verify_password_by_username,
 		create_account,
 		update_account,
 		delete_account,
@@ -44,6 +45,7 @@ profile_picture: {
 
 PATCH /account/<id> - update account data
 password: String - required
+new_username: String - optional
 new_password: String - optional
 new_account_type: AccountType - optional
 new_profile_picture: {
@@ -54,10 +56,17 @@ new_profile_picture: {
 DELETE /account/<id> - delete account
 password: String - required
 
-GET /account/<id>/classes - get student/teacher account classes
+POST /account/<id>/classes - get student/teacher account classes
 password: String - required
 
-GET /account/<id>/assignments - get student assignments
+POST /account/<id>/assignments - get student assignments
+password: String - required
+
+POST /account/<id>/verify - verify password by id
+password: String - required
+
+POST /account/verify - verify password by username
+username: String - required
 password: String - required
 "#
 }
@@ -110,22 +119,41 @@ async fn get_account_by_username(username: String) -> Result<Json<GetAccountData
 
 
 #[derive(Deserialize)]
-struct VerifyPasswordData {
+struct VerifyPasswordByIdData {
+	password: String,
+}
+
+#[post("/account/<id>/verify", data = "<verify_data>")]
+async fn verify_password_by_id(id: i32, verify_data: Json<VerifyPasswordByIdData>) -> Either<Json<GetAccountData>, Status> {
+	match Account::get_by_id(&id).await {
+		Ok(mut account) => {
+			match account.verify_password(&verify_data.password).await {
+				Ok(true) => Left(Json(GetAccountData::from_account(account).await)),
+				Ok(false) => Right(Status::Unauthorized),
+				Err(e) => Right(internal_err(&e)),
+			}
+		},
+		Err(e) => Right(db_err_to_status(&e, Status::NotFound)),
+	}
+}
+
+#[derive(Deserialize)]
+struct VerifyPasswordByUsernameData {
 	username: String,
 	password: String,
 }
 
-#[post("/account/verify", data = "<account_data>")]
-async fn verify_password(account_data: Json<VerifyPasswordData>) -> Status {
-	match Account::get_by_username(&account_data.username).await {
+#[post("/account/verify", data = "<verify_data>")]
+async fn verify_password_by_username(verify_data: Json<VerifyPasswordByUsernameData>) -> Either<Json<GetAccountData>, Status> {
+	match Account::get_by_username(&verify_data.username).await {
 		Ok(mut account) => {
-			match account.verify_password(&account_data.password).await {
-				Ok(true) => Status::Ok,
-				Ok(false) => Status::Unauthorized,
-				Err(e) => internal_err(&e),
+			match account.verify_password(&verify_data.password).await {
+				Ok(true) => Left(Json(GetAccountData::from_account(account).await)),
+				Ok(false) => Right(Status::Unauthorized),
+				Err(e) => Right(internal_err(&e)),
 			}
 		},
-		Err(e) => db_err_to_status(&e, Status::NotFound),
+		Err(e) => Right(db_err_to_status(&e, Status::NotFound)),
 	}
 }
 
@@ -138,16 +166,16 @@ struct PostAccountData {
 }
 
 #[post("/account", data = "<account_data>")]
-async fn create_account(account_data: Json<PostAccountData>) -> Result<Created<String>, Either<Status, BadRequest<String>>> {
+async fn create_account(account_data: Json<PostAccountData>) -> Result<Created<Json<Account>>, Status> {
 
 	use NewAccountError::*;
 	use AccountError::*;
 
 	match Account::new(&account_data.username, &account_data.password, &account_data.account_type, &account_data.profile_picture).await {
-		Ok(account) => Ok(Created::new(format!("{BASE_URL}/account/{}", account.id))),
-		Err(Base(Sqlx(e))) => Err(Left(internal_err(&e))),
-		Err(Base(IO(e))) => Err(Left(internal_err(&e))),
-		Err(e) => Err(Right(BadRequest(Some(e.to_string())))),
+		Ok(account) => Ok(Created::new(format!("account/{}", account.id)).body(Json(account))),
+		Err(Base(Sqlx(e))) => Err(internal_err(&e)),
+		Err(Base(IO(e))) => Err(internal_err(&e)),
+		Err(e) => Err(e.to_status()),
 	}
 
 }
@@ -157,6 +185,7 @@ async fn create_account(account_data: Json<PostAccountData>) -> Result<Created<S
 #[derive(Deserialize)]
 struct PatchAccountData {
 	password: String,
+	new_username: Option<String>,
 	new_password: Option<String>,
 	new_account_type: Option<AccountType>,
 	new_profile_picture: Option<NewMediaData>,
@@ -164,7 +193,6 @@ struct PatchAccountData {
 
 #[patch("/account/<id>", data = "<new_account_data>")]
 async fn update_account(id: i32, new_account_data: Json<PatchAccountData>) -> Result<Status, Either<Status, BadRequest<&'static str>>> {
-
 	
 	let mut account = match Account::get_by_id(&id).await {
 		Ok(acc) => acc,
@@ -178,6 +206,14 @@ async fn update_account(id: i32, new_account_data: Json<PatchAccountData>) -> Re
 	}
 
 
+
+	if let Some(new_username) = &new_account_data.new_username {
+		match account.update_username(new_username).await {
+			Ok(true) => (),
+			Ok(false) => return Err(Right(BadRequest(Some("bad username")))),
+			Err(e) => return Err(Left(db_err_to_status(&e, Status::Conflict))),
+		}
+	}
 	
 	if let Some(new_account_type) = &new_account_data.new_account_type {
 		if account.update_account_type(new_account_type).await.is_err() {
@@ -199,7 +235,10 @@ async fn update_account(id: i32, new_account_data: Json<PatchAccountData>) -> Re
 		match account.update_profile_picture(new_profile_picture).await {
 			Ok(_) => (),
 			Err(Sqlx(e)) => return Err(Left(internal_err(&e))),
-			Err(Base64(_)) => return Err(Right(BadRequest(Some("bad profile picture base64")))),
+			Err(Base64(e)) => {
+				println!("{e}");
+				return Err(Right(BadRequest(Some("bad profile picture base64"))))
+			},
 			Err(IO(e)) => return Err(Left(internal_err(&e))),
 		}
 	}

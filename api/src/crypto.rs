@@ -90,6 +90,10 @@ pub fn validate_username(username: &String) -> bool {
 		return false
 	}
 
+	if username.len() > 12 {
+		return false
+	}
+
 	if !username.is_ascii() {
 		return false
 	}

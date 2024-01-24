@@ -48,7 +48,10 @@ creator_password: String - required
 qwiz: {
 	name: String - required
 	creator_id: i32 - required
-	thumbnail_uri: String - optional
+	thumbnail: {
+		data: String - required
+		media_type: MediaType - required
+	} - optional
 	public: bool - optional
 } - required
 questions: Vector of {
@@ -207,7 +210,10 @@ async fn create_qwiz(qwiz_data: Json<PostQwizData>) -> Result<Created<String>, E
 
 		Ok(qwiz) => qwiz,
 		Err(Sqlx(e)) => return Err(Left(db_err_to_status(&e, Status::BadRequest))),
-		Err(Base64(_)) => return Err(Right(BadRequest(Some("bad thumbnail base64")))),
+		Err(Base64(e)) => {
+			println!("{e}");
+			return Err(Right(BadRequest(Some("bad thumbnail base64"))))
+		},
 		Err(IO(e)) => return Err(Left(internal_err(&e))),
 
 	};

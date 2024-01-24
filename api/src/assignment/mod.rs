@@ -5,6 +5,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::{POOL, OptBool};
 use sqlx::types::chrono::NaiveDateTime;
 
+use self::routes::CreateAssignmentData;
+
 
 
 pub struct Assignment {
@@ -43,6 +45,21 @@ impl Assignment {
 			student_id,
 		)
 		.fetch_all(POOL.get().await)
+		.await
+
+	}
+
+	pub async fn create(class_id: i32, create_assignment_data: &CreateAssignmentData) -> sqlx::Result<Self> {
+
+		sqlx::query_as!(
+			Assignment,
+			r#"INSERT INTO assignment (qwiz_id, class_id, open_time, close_time) VALUES ($1, $2, $3, $4) RETURNING *, FALSE as completed"#,
+			&create_assignment_data.qwiz_id,
+			&class_id,
+			create_assignment_data.open_time.map(|t| NaiveDateTime::from_timestamp_opt(t, 0)).flatten(),
+			create_assignment_data.close_time.map(|t| NaiveDateTime::from_timestamp_opt(t, 0)).flatten(),
+		)
+		.fetch_one(POOL.get().await)
 		.await
 
 	}

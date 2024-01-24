@@ -47,6 +47,7 @@ impl ToString for ClassError {
 pub struct Class {
 	pub id: i32,
 	pub teacher_id: i32,
+	pub teacher_name: Option<String>,
 	pub name: String,
 }
 
@@ -56,7 +57,7 @@ impl Class {
 
 		sqlx::query_as!(
 			Class,
-			"SELECT * FROM class WHERE id=$1",
+			"SELECT *, (SELECT username FROM account WHERE id=teacher_id) as teacher_name FROM class WHERE id=$1",
 			id,
 		)
 		.fetch_one(POOL.get().await)
@@ -76,7 +77,7 @@ impl Class {
 
 		sqlx::query_as!(
 			Class,
-			"SELECT * FROM class WHERE teacher_id=$1",
+			"SELECT *, (SELECT username FROM account WHERE id=teacher_id) as teacher_name FROM class WHERE teacher_id=$1",
 			teacher_id,
 		)
 		.fetch_all(POOL.get().await)
@@ -97,7 +98,7 @@ impl Class {
 
 		sqlx::query_as!(
 			Class,
-			"SELECT * FROM class WHERE id IN (SELECT class_id FROM student WHERE student_id=$1)",
+			"SELECT *, (SELECT username FROM account WHERE id=teacher_id) as teacher_name FROM class WHERE id IN (SELECT class_id FROM student WHERE student_id=$1)",
 			student_id,
 		)
 		.fetch_all(POOL.get().await)
@@ -120,7 +121,7 @@ impl Class {
 
 		let class = sqlx::query_as!(
 			Class,
-			"INSERT INTO class (teacher_id, name) VALUES ($1, $2) RETURNING *",
+			"INSERT INTO class (teacher_id, name) VALUES ($1, $2) RETURNING *, (SELECT username FROM account WHERE id=teacher_id) as teacher_name",
 			&data.teacher_id,
 			&data.name,
 		)

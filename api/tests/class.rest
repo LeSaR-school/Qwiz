@@ -3,13 +3,13 @@
 @base_url = http://localhost:8000/api/class
 @account_url = http://localhost:8000/api/account
 
-@teacher_id = 4
-@teacher_password = pAssword1234&
+@teacher_id = 8
+@teacher_password = Password123!
 
 @student_id = 3
 @student_password = Password123!
 
-@id = 1
+@id = 2
 
 
 

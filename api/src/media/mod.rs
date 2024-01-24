@@ -2,7 +2,7 @@ pub mod routes;
 
 
 
-use crate::{POOL, BASE_URL};
+use crate::POOL;
 
 use std::{path::Path, fs, io::Write, fmt::Display};
 use base64::{engine::general_purpose, Engine};
@@ -64,7 +64,7 @@ impl NewMediaData {
 		let path_str = format!("{}/media/{uuid}.{}", env!("CARGO_MANIFEST_DIR"), self.media_type.get_file_extension());
 		let path = Path::new(&path_str);
 		
-		match general_purpose::STANDARD.decode(&self.data) {
+		match general_purpose::URL_SAFE_NO_PAD.decode(&self.data) {
 			Ok(binary) => {
 
 				match fs::OpenOptions::new()
@@ -74,7 +74,7 @@ impl NewMediaData {
 				{
 					Ok(mut file) => {
 						match file.write_all(&binary) {
-							Ok(_) => Ok(format!("{BASE_URL}/media/upload/{uuid}.{}", self.media_type.get_file_extension())),
+							Ok(_) => Ok(format!("media/upload/{uuid}.{}", self.media_type.get_file_extension())),
 							Err(e) => Err(IO(e)),
 						}
 					},

@@ -73,10 +73,11 @@ pub struct GetQuestionData {
 	index: i32,
 	body: String,
 	answer1: String,
-	asnwer2: String,
+	answer2: String,
 	answer3: Option<String>,
 	answer4: Option<String>,
 	embed: Option<GetMediaData>,
+	correct: u8,
 }
 impl GetQuestionData {
 	
@@ -85,13 +86,14 @@ impl GetQuestionData {
 			index: question.index,
 			body: question.body,
 			answer1: question.answer1,
-			asnwer2: question.answer2,
+			answer2: question.answer2,
 			answer3: question.answer3,
 			answer4: question.answer4,
 			embed: match question.embed_uuid {
 				Some(uuid) => Media::get_by_uuid(&uuid).await.ok().map(Into::into),
 				None => None,
 			},
+			correct: question.correct as u8,
 		}
 	}
 
@@ -161,8 +163,8 @@ struct PatchQuestionData {
 }
 
 #[patch("/question/<qwiz_id>/<index>", data = "<new_question_data>")]
-async fn update_question(qwiz_id: i32, index: i32, new_question_data: Json<PatchQuestionData>) -> Result<Status, Either<Status, BadRequest<&'static str>>> {
-	
+async fn update_question(qwiz_id: i32, index: i32, mut new_question_data: Json<PatchQuestionData>) -> Result<Status, Either<Status, BadRequest<&'static str>>> {
+
 	use QuestionError::*;
 
 	let mut question = match Question::get_by_qwiz_id_index(&qwiz_id, &index).await {
@@ -190,6 +192,7 @@ async fn update_question(qwiz_id: i32, index: i32, new_question_data: Json<Patch
 
 	if let Some(new_index) = &new_question_data.new_index {
 		if question.update_index(new_index).await.is_err() {
+			println!("a");
 			return Err(Right(BadRequest(Some("bad index"))));
 		}
 	}
@@ -200,17 +203,18 @@ async fn update_question(qwiz_id: i32, index: i32, new_question_data: Json<Patch
 		}
 	}
 
-	if let Some(new_answers) = &new_question_data.new_answers {
+	if let Some(new_correct) = &new_question_data.new_correct {
+		if question.update_correct(new_correct).await.is_err() {
+			return Err(Right(BadRequest(Some("bad correct"))));
+		}
+	}
+
+	if let Some(new_answers) = &mut new_question_data.new_answers {
+		new_answers.sort_by(|a, b| b.index.cmp(&a.index));
 		for new_answer in new_answers {
 			if question.update_answer(&new_answer.index, &new_answer.content).await.is_err() {
 				return Err(Right(BadRequest(Some("bad answer"))));
 			}
-		}
-	}
-
-	if let Some(new_correct) = &new_question_data.new_correct {
-		if question.update_correct(new_correct).await.is_err() {
-			return Err(Right(BadRequest(Some("bad correct"))));
 		}
 	}
 

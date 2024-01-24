@@ -1,3 +1,4 @@
+use crate::class::Class;
 use crate::{internal_err, db_err_to_status};
 use crate::assignment::Assignment;
 use crate::account::{Account, AccountType};
@@ -10,7 +11,8 @@ use serde::{Serialize, Deserialize};
 pub fn all() -> Vec<Route> {
 
 	routes![
-		get_account_assignments
+		get_account_assignments,
+		create_assignment,
 	]
 
 }
@@ -30,8 +32,8 @@ impl From<Assignment> for GetAssignmentData {
 		Self {
 			qwiz_id: value.qwiz_id,
 			class_id: value.class_id,
-			open_time: value.open_time.map(|ts| ts.timestamp_millis()),
-			close_time: value.close_time.map(|ts| ts.timestamp_millis()),
+			open_time: value.open_time.map(|ts| ts.timestamp()),
+			close_time: value.close_time.map(|ts| ts.timestamp()),
 			completed: *value.completed,
 		}
 	}
@@ -44,7 +46,7 @@ struct GetAssignmentsData {
 	password: String,
 }
 
-#[get("/account/<id>/assignments", data = "<get_assignments_data>")]
+#[post("/account/<id>/assignments", data = "<get_assignments_data>")]
 async fn get_account_assignments(id: i32, get_assignments_data: Json<GetAssignmentsData>) -> Result<Json<Vec<GetAssignmentData>>, Either<Status, BadRequest<&'static str>>> {
 
 	let mut account = match Account::get_by_id(&id).await {
@@ -67,6 +69,42 @@ async fn get_account_assignments(id: i32, get_assignments_data: Json<GetAssignme
 	match Assignment::get_all_by_student_id(&account.id).await {
 		Ok(assignments) => Ok(Json(assignments.into_iter().map(From::from).collect())),
 		Err(e) => Err(Left(internal_err(&e))),
+	}
+
+}
+
+
+
+#[derive(Deserialize)]
+pub struct CreateAssignmentData {
+	teacher_password: String,
+	pub qwiz_id: i32,
+	pub open_time: Option<i64>,
+	pub close_time: Option<i64>,
+}
+
+#[post("/class/<id>/assignments", data = "<create_assignment_data>")]
+async fn create_assignment(id: i32, create_assignment_data: Json<CreateAssignmentData>) -> Status {
+
+	let class = match Class::get_by_id(&id).await {
+		Ok(c) => c,
+		Err(e) => return db_err_to_status(&e, Status::NotFound),
+	};
+
+	let mut account = match Account::get_by_id(&class.teacher_id).await {
+		Ok(acc) => acc,
+		Err(e) => return internal_err(&e),
+	};
+
+	match account.verify_password(&create_assignment_data.teacher_password).await {
+		Ok(true) => (),
+		Ok(false) => return Status::Unauthorized,
+		Err(e) => return internal_err(&e),
+	};
+
+	match Assignment::create(id, &create_assignment_data).await {
+		Ok(_) => Status::Created,
+		Err(e) => internal_err(&e),
 	}
 
 }

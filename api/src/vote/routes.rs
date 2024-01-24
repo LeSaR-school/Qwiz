@@ -1,7 +1,7 @@
 use crate::account::Account;
 use crate::vote::{Vote, NewVoteData, VoteError};
 use rocket::{Route, http::Status, serde::json::Json};
-use serde::{Serialize, Deserialize};
+use serde::Deserialize;
 
 
 
@@ -35,25 +35,13 @@ voter_password: String - required
 
 
 
-#[derive(Serialize)]
-struct GetVoteData {
-	voter_ids: Vec<i32>,
-}
-impl GetVoteData {
-	fn from_votes(votes: Vec<Vote>) -> Self {
-		Self {
-			voter_ids: votes.iter().map(|vote| vote.voter_id).collect(),
-		}
-	}
-}
-
 #[get("/vote/<qwiz_id>")]
-async fn get_votes(qwiz_id: i32) -> Result<Json<GetVoteData>, Status> {
+async fn get_votes(qwiz_id: i32) -> Result<Json<Vec<i32>>, Status> {
 
 	use VoteError::*;
 
 	match Vote::get_all_by_qwiz_id(&qwiz_id).await {
-		Ok(votes) => Ok(Json(GetVoteData::from_votes(votes))),
+		Ok(votes) => Ok(Json(votes.into_iter().map(|vote| vote.voter_id).collect())),
 		Err(Sqlx(e)) => {
 
 			eprintln!("{e}");

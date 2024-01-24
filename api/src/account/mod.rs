@@ -2,10 +2,11 @@ pub mod routes;
 
 
 
-use crate::POOL;
+use crate::{POOL, internal_err};
 use crate::crypto;
 use crate::media::{Media, NewMediaData, MediaError};
 use std::fmt::Display;
+use rocket::http::Status;
 use tokio::sync::Mutex;
 use serde::{Serialize, Deserialize};
 use sqlx::types::Uuid;
@@ -78,19 +79,19 @@ impl From<MediaError> for NewAccountError {
 		Self::Base(AccountError::from(value))
 	}
 }
-impl ToString for NewAccountError {
-	fn to_string(&self) -> String {
+impl NewAccountError {
+	fn to_status(&self) -> Status {
 
 		use NewAccountError::*;
 		use AccountError::*;
 
 		match self {
-			Base(Sqlx(e)) => e.to_string(),
-			Base(IO(e)) => e.to_string(),
-			Base(Base64(_)) => "invalid base64".to_owned(),
-			InvalidUsername => "invalid username".to_owned(),
-			InvalidPassword => "invalid password".to_owned(),
-			UsernameTaken => "username is taken".to_owned(),
+			Base(Sqlx(e)) => internal_err(&e),
+			Base(IO(e)) => internal_err(&e),
+			Base(Base64(_)) => Status::BadRequest,
+			InvalidUsername => Status::BadRequest,
+			InvalidPassword => Status::BadRequest,
+			UsernameTaken => Status::Conflict,
 		}
 
 	}
@@ -230,6 +231,25 @@ impl Account {
 
 		Ok(account)
 	
+	}
+
+	pub async fn update_username(&mut self, new_username: &String) -> sqlx::Result<bool> {
+
+		if !crypto::validate_username(new_username) {
+			return Ok(false)
+		}
+
+		self.username = sqlx::query!(
+			"UPDATE account SET username=$1 WHERE id=$2 RETURNING username",
+			new_username,
+			self.id
+		)
+		.fetch_one(POOL.get().await)
+		.await?
+		.username;
+
+		Ok(true)
+
 	}
 
 	pub async fn update_password(&mut self, new_password: &String) -> sqlx::Result<bool> {

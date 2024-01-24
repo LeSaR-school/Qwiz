@@ -6,7 +6,6 @@ mod class;
 mod assignment;
 mod media;
 mod crypto;
-mod live;
 
 
 
@@ -59,7 +58,6 @@ async fn rocket() -> _ {
 	routes.append(&mut class::routes::all());
 	routes.append(&mut assignment::routes::all());
 	routes.append(&mut media::routes::all());
-	routes.append(&mut live::routes::all());
 
 	rocket::build()
 		.register(BASE_URL, catchers![default_catcher])
