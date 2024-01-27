@@ -385,9 +385,6 @@ async fn solve_qwiz(qwiz_id: i32, solve_qwiz_data: Json<PostSolveQwizData>, assi
 		Err(e) => return Err(Right(BadRequest(Some(e.as_str())))),
 	};
 
-
-	println!("{assignment_id:?}");
-
 	match (assignment_id, &solve_qwiz_data.username) {
 		(Some(id), Some(username)) => {
 			

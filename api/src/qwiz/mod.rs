@@ -272,7 +272,7 @@ impl Qwiz {
 			(SELECT uri FROM media WHERE uuid=(SELECT profile_picture_uuid FROM account WHERE id=creator_id)) as creator_profile_picture_uri,
 			CAST(EXTRACT(EPOCH FROM create_time AT TIME ZONE 'UTC') * 1000 AS BIGINT) AS create_time
 			FROM qwiz WHERE public AND create_time >= (NOW() - MAKE_INTERVAL(days => $1)) and LOWER(name) LIKE LOWER($2)
-			ORDER BY votes LIMIT 50 OFFSET $3"#,
+			ORDER BY create_time DESC LIMIT 50 OFFSET $3"#,
 			days as i32,
 			format!("%{name}%"),
 			page * 50,
