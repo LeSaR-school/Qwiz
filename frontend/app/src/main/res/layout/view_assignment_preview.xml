@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	android:layout_width="match_parent"
+	android:layout_height="120dp"
+	android:background="?attr/colorBackground">
+
+	<TextView
+		android:id="@+id/tvAssignmentQwizName"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="10dp"
+		android:layout_marginTop="10dp"
+		android:layout_marginEnd="10dp"
+		android:text="@string/loading"
+		android:textColor="?colorForeground"
+		android:textSize="40sp"
+		app:autoSizeMaxTextSize="40dp"
+		app:autoSizeMinTextSize="6dp"
+		app:autoSizeTextType="uniform"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toTopOf="parent" />
+
+	<TextView
+		android:id="@+id/tvOpensAt"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="10dp"
+		android:layout_marginBottom="8dp"
+		android:alpha="0.7"
+		android:text="@string/assignment_opens_at"
+		android:textColor="?colorForeground"
+		android:textSize="12sp"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintEnd_toStartOf="@+id/tvOpenTime"
+		app:layout_constraintHorizontal_bias="0.5"
+		app:layout_constraintHorizontal_chainStyle="packed"
+		app:layout_constraintStart_toStartOf="parent" />
+
+	<TextView
+		android:id="@+id/tvClosesAt"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="10dp"
+		android:alpha="0.7"
+		android:text="@string/assignment_closes_at"
+		android:textColor="?colorForeground"
+		android:textSize="12sp"
+		app:layout_constraintBottom_toBottomOf="@+id/tvOpensAt"
+		app:layout_constraintEnd_toStartOf="@+id/tvCloseTime"
+		app:layout_constraintHorizontal_bias="0.5"
+		app:layout_constraintHorizontal_chainStyle="packed"
+		app:layout_constraintStart_toEndOf="@+id/tvOpenTime" />
+
+	<TextView
+		android:id="@+id/tvOpenTime"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="10dp"
+		android:alpha="0.7"
+		android:gravity="bottom"
+		android:text="@string/loading"
+		android:textColor="?colorForeground"
+		android:textSize="16sp"
+		app:autoSizeMaxTextSize="16dp"
+		app:autoSizeMinTextSize="6dp"
+		app:autoSizeTextType="uniform"
+		app:layout_constraintBottom_toBottomOf="@+id/tvOpensAt"
+		app:layout_constraintEnd_toStartOf="@+id/tvClosesAt"
+		app:layout_constraintHorizontal_bias="0.5"
+		app:layout_constraintStart_toEndOf="@+id/tvOpensAt" />
+
+	<TextView
+		android:id="@+id/tvCloseTime"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="10dp"
+		android:layout_marginEnd="10dp"
+		android:alpha="0.7"
+		android:gravity="bottom"
+		android:text="@string/loading"
+		android:textColor="?colorForeground"
+		android:textSize="16sp"
+		app:autoSizeMaxTextSize="16dp"
+		app:autoSizeMinTextSize="6dp"
+		app:autoSizeTextType="uniform"
+		app:layout_constraintBottom_toBottomOf="@+id/tvClosesAt"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintHorizontal_bias="0.5"
+		app:layout_constraintStart_toEndOf="@+id/tvClosesAt" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

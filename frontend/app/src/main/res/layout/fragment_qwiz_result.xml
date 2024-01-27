@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:id="@+id/clQwizResult"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	tools:context=".fragment.QwizResultFragment" >
+
+	<Button
+		android:id="@+id/bOk"
+		style="@style/Widget.Material3.Button"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginBottom="16dp"
+		android:insetTop="0dp"
+		android:insetBottom="0dp"
+		android:text="@string/ok"
+		android:textAppearance="@style/TextAppearance.AppCompat.Large"
+		android:textColor="?colorForeground"
+		android:textSize="36sp"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent" />
+
+	<TextView
+		android:id="@+id/tvYouScored"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="32dp"
+		android:text="@string/you_scored"
+		android:textColor="?colorForeground"
+		android:textSize="36sp"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toTopOf="parent" />
+
+	<TextView
+		android:id="@+id/tvScore"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="16dp"
+		android:text="0 / 0"
+		android:textColor="?colorPrimary"
+		android:textSize="48sp"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@+id/tvYouScored" />
+
+	<TextView
+		android:id="@+id/tvAssignmentComplete"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="20dp"
+		android:text="@string/assignment_complete"
+		android:textAlignment="center"
+		android:textColor="?colorPrimary"
+		android:textSize="36sp"
+		android:visibility="gone"
+		app:autoSizeMaxTextSize="36dp"
+		app:autoSizeMinTextSize="20dp"
+		app:autoSizeTextType="uniform"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@+id/tvScore"
+		tools:visibility="visible" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

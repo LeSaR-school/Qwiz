@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:id="@+id/profileLayout"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	tools:context=".fragment.ProfileFragment">
+
+	<com.google.android.material.floatingactionbutton.FloatingActionButton
+		android:id="@+id/fabCreateClass"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginEnd="20dp"
+		android:layout_marginBottom="20dp"
+		android:clickable="true"
+		android:contentDescription="@string/qwiz_create"
+		android:enabled="false"
+		android:focusable="true"
+		android:src="@drawable/plus"
+		android:visibility="gone"
+		tools:visibility="visible"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:maxImageSize="36dp" />
+
+	<androidx.recyclerview.widget.RecyclerView
+		android:id="@+id/rvClassPreviews"
+		android:layout_width="0dp"
+		android:layout_height="0dp"
+		android:layout_marginTop="8dp"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintHorizontal_bias="1.0"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@+id/bDeleteAccount" />
+
+	<TextView
+		android:id="@+id/tvProfileUsername"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="12dp"
+		android:layout_marginEnd="12dp"
+		android:text="@string/loading"
+		android:textAlignment="viewStart"
+		android:textAppearance="@style/TextAppearance.AppCompat.Large"
+		android:textColor="?colorPrimary"
+		android:textSize="40sp"
+		app:autoSizeMaxTextSize="40sp"
+		app:autoSizeMinTextSize="20sp"
+		app:autoSizeStepGranularity="2dp"
+		app:autoSizeTextType="uniform"
+		app:layout_constraintBottom_toBottomOf="@+id/ivProfilePicture"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toEndOf="@+id/ivProfilePicture"
+		app:layout_constraintTop_toTopOf="@+id/ivProfilePicture" />
+
+	<TextView
+		android:id="@+id/tvProfileAccountType"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="20dp"
+		android:text="@string/loading"
+		android:textAlignment="viewStart"
+		android:textAppearance="@style/TextAppearance.AppCompat.Large"
+		android:textColor="?colorForeground"
+		android:textSize="30sp"
+		app:layout_constraintStart_toStartOf="@+id/ivProfilePicture"
+		app:layout_constraintTop_toBottomOf="@+id/ivProfilePicture" />
+
+	<ImageView
+		android:id="@+id/ivProfilePicture"
+		android:layout_width="100dp"
+		android:layout_height="100dp"
+		android:layout_marginStart="12dp"
+		android:layout_marginTop="12dp"
+		android:background="?attr/colorForeground"
+		android:importantForAccessibility="no"
+		android:scaleType="centerCrop"
+		android:src="@drawable/profile"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toTopOf="parent" />
+
+	<Button
+		android:id="@+id/bEditProfile"
+		style="@style/Widget.Material3.Button"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:enabled="false"
+		android:insetTop="0dp"
+		android:insetBottom="0dp"
+		android:text="@string/edit_profile"
+		android:textAppearance="@style/TextAppearance.AppCompat.Large"
+		android:textColor="?colorForeground"
+		android:textSize="24sp"
+		app:layout_constraintBottom_toBottomOf="@+id/tvProfileAccountType"
+		app:layout_constraintEnd_toEndOf="@+id/tvProfileUsername" />
+
+	<Button
+		android:id="@+id/bSignOut"
+		style="@style/Widget.Material3.Button"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginEnd="8dp"
+		android:insetTop="0dp"
+		android:insetBottom="0dp"
+		android:text="@string/sign_out"
+		android:textAppearance="@style/TextAppearance.AppCompat.Large"
+		android:textColor="?colorForeground"
+		android:textSize="24sp"
+		app:layout_constraintBottom_toBottomOf="@+id/bDeleteAccount"
+		app:layout_constraintEnd_toStartOf="@+id/bDeleteAccount"
+		app:layout_constraintTop_toTopOf="@+id/bDeleteAccount" />
+
+	<Button
+		android:id="@+id/bDeleteAccount"
+		style="@style/Widget.Material3.Button"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="8dp"
+		android:insetTop="0dp"
+		android:insetBottom="0dp"
+		android:text="@string/delete"
+		android:textAppearance="@style/TextAppearance.AppCompat.Large"
+		android:textColor="?colorForeground"
+		android:textSize="24sp"
+		app:layout_constraintEnd_toEndOf="@+id/bEditProfile"
+		app:layout_constraintTop_toBottomOf="@+id/bEditProfile" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

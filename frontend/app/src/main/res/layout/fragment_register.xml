@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:id="@+id/registerLayout"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	tools:context=".fragment.LoginFragment">
+
+	<TextView
+		android:id="@+id/logo_register"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="50dp"
+		android:text="@string/app_name"
+		android:textColor="?colorPrimary"
+		android:textSize="60sp"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toTopOf="parent" />
+
+	<EditText
+		android:id="@+id/etUsername"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:autofillHints="emailAddress"
+		android:backgroundTint="?colorForeground"
+		android:backgroundTintMode="src_atop"
+		android:ems="8"
+		android:hint="@string/username"
+		android:inputType="textEmailAddress"
+		android:maxLength="12"
+		android:textSize="24sp"
+		app:layout_constraintBottom_toTopOf="@+id/etPassword"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@+id/logo_register"
+		app:layout_constraintVertical_chainStyle="packed" />
+
+	<EditText
+		android:id="@+id/etPassword"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="10dp"
+		android:autofillHints="password"
+		android:backgroundTint="?colorForeground"
+		android:backgroundTintMode="src_atop"
+		android:ems="8"
+		android:hint="@string/password"
+		android:inputType="textPassword"
+		android:textSize="24sp"
+		app:layout_constraintBottom_toTopOf="@+id/etPasswordConfirm"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@+id/etUsername" />
+
+	<EditText
+		android:id="@+id/etPasswordConfirm"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="10dp"
+		android:autofillHints="password"
+		android:backgroundTint="?colorForeground"
+		android:backgroundTintMode="src_atop"
+		android:ems="8"
+		android:hint="@string/confirm_password"
+		android:inputType="textPassword"
+		android:textSize="24sp"
+		app:layout_constraintBottom_toTopOf="@+id/rgNewAccountType"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@+id/etPassword" />
+
+	<RadioGroup
+		android:id="@+id/rgNewAccountType"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="20dp"
+		android:layout_marginTop="10dp"
+		android:layout_marginEnd="20dp"
+		android:layout_marginBottom="10dp"
+		android:orientation="horizontal"
+		app:layout_constraintBottom_toTopOf="@+id/bRegister"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@+id/etPasswordConfirm">
+
+		<RadioButton
+			android:id="@+id/rbStudent"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:text="@string/student" />
+
+		<RadioButton
+			android:id="@+id/rbTeacher"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:text="@string/teacher" />
+
+		<RadioButton
+			android:id="@+id/rbParent"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:text="@string/parent" />
+	</RadioGroup>
+
+	<Button
+		android:id="@+id/bRegister"
+		style="@style/Widget.Material3.Button"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="10dp"
+		android:layout_marginBottom="10dp"
+		android:insetTop="0dp"
+		android:insetBottom="0dp"
+		android:text="@string/register"
+		android:textAppearance="@style/TextAppearance.AppCompat.Large"
+		android:textColor="?colorForeground"
+		android:textSize="24sp"
+		app:layout_constraintBottom_toTopOf="@+id/tvAlreadyRegistered"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@+id/rgNewAccountType" />
+
+	<TextView
+		android:id="@+id/tvAlreadyRegistered"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="20dp"
+		android:alpha="0.7"
+		android:text="@string/already_registered"
+		android:textColor="?colorForeground"
+		android:textSize="16sp"
+		app:layout_constraintBottom_toTopOf="@+id/bLogin"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@+id/bRegister" />
+
+	<Button
+		android:id="@+id/bLogin"
+		style="@style/Widget.Material3.Button.TextButton"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:text="@string/login_ul"
+		android:textSize="24sp"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@+id/tvAlreadyRegistered"
+		tools:layout_editor_absoluteX="161dp"
+		tools:layout_editor_absoluteY="542dp" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

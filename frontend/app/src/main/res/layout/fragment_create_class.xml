@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:id="@+id/clCreateQwiz"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	tools:context=".fragment.CreateClassFragment">
+
+	<EditText
+		android:id="@+id/etClassName"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="8dp"
+		android:ems="10"
+		android:hint="Class name"
+		android:inputType="text"
+		android:textColor="?colorPrimary"
+		android:textSize="24sp"
+		app:layout_constraintEnd_toEndOf="@+id/tvCreateClass"
+		app:layout_constraintHorizontal_bias="0.0"
+		app:layout_constraintStart_toStartOf="@+id/tvCreateClass"
+		app:layout_constraintTop_toBottomOf="@+id/tvCreateClass" />
+
+	<EditText
+		android:id="@+id/etSearchStudents"
+		android:layout_width="0dp"
+		android:layout_height="50dp"
+		android:layout_marginTop="8dp"
+		android:autofillHints="@string/search"
+		android:ems="10"
+		android:hint="@string/search"
+		android:inputType="text"
+		app:layout_constraintEnd_toStartOf="@+id/bSearchStudents"
+		app:layout_constraintHorizontal_bias="0.0"
+		app:layout_constraintStart_toStartOf="@+id/tvCreateClassStudents"
+		app:layout_constraintTop_toBottomOf="@+id/tvCreateClassStudents" />
+
+	<ImageButton
+		android:id="@+id/bSearchStudents"
+		android:layout_width="50dp"
+		android:layout_height="50dp"
+		android:background="#00FFFFFF"
+		android:contentDescription="@string/search"
+		android:padding="8dp"
+		android:scaleType="fitCenter"
+		android:src="@drawable/search"
+		app:layout_constraintBottom_toBottomOf="@+id/etSearchStudents"
+		app:layout_constraintEnd_toEndOf="@+id/tvCreateClassStudents"
+		app:layout_constraintTop_toTopOf="@+id/etSearchStudents"
+		app:layout_constraintVertical_bias="0.0" />
+
+	<TextView
+		android:id="@+id/tvCreateClass"
+		android:layout_width="0dp"
+		android:layout_height="60dp"
+		android:layout_marginStart="8dp"
+		android:layout_marginTop="8dp"
+		android:layout_marginEnd="8dp"
+		android:text="@string/create_class"
+		android:textAlignment="center"
+		android:textColor="?colorForeground"
+		android:textSize="42sp"
+		app:autoSizeMaxTextSize="42dp"
+		app:autoSizeMinTextSize="20dp"
+		app:autoSizeTextType="uniform"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toTopOf="parent" />
+
+	<TextView
+		android:id="@+id/tvCreateClassStudents"
+		android:layout_width="0dp"
+		android:layout_height="60dp"
+		android:layout_marginTop="8dp"
+		android:text="@string/select_students"
+		android:textAlignment="center"
+		android:textColor="?colorForeground"
+		android:textSize="42sp"
+		app:autoSizeMaxTextSize="42dp"
+		app:autoSizeMinTextSize="20dp"
+		app:autoSizeTextType="uniform"
+		app:layout_constraintEnd_toEndOf="@+id/etClassName"
+		app:layout_constraintStart_toStartOf="@+id/etClassName"
+		app:layout_constraintTop_toBottomOf="@+id/etClassName" />
+
+	<TextView
+		android:id="@+id/tvSelectedStudents"
+		android:layout_width="0dp"
+		android:layout_height="0dp"
+		android:layout_marginTop="8dp"
+		android:layout_marginBottom="8dp"
+		android:scrollbars="vertical"
+		android:textColor="?colorForeground"
+		android:textSize="30sp"
+		app:layout_constraintBottom_toTopOf="@+id/bCreateClass"
+		app:layout_constraintEnd_toEndOf="@+id/bSearchStudents"
+		app:layout_constraintStart_toStartOf="@+id/etSearchStudents"
+		app:layout_constraintTop_toBottomOf="@+id/etSearchStudents" />
+
+	<Button
+		android:id="@+id/bCreateClass"
+		style="@style/Widget.Material3.Button"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginBottom="10dp"
+		android:insetTop="0dp"
+		android:insetBottom="0dp"
+		android:text="@string/create"
+		android:textAppearance="@style/TextAppearance.AppCompat.Large"
+		android:textColor="?colorForeground"
+		android:textSize="24sp"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

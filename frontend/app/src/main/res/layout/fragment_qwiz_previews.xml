@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:id="@+id/QwizPreviewLayout"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	tools:context=".fragment.QwizPreviewsFragment" >
+
+	<androidx.recyclerview.widget.RecyclerView
+		android:id="@+id/rvQwizPreviews"
+		android:layout_width="match_parent"
+		android:layout_height="0dp"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@+id/etSearchQwizes" />
+
+	<com.google.android.material.floatingactionbutton.FloatingActionButton
+		android:id="@+id/fabCreateQwiz"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginEnd="20dp"
+		android:layout_marginBottom="20dp"
+		android:clickable="true"
+		android:contentDescription="@string/qwiz_create"
+		android:enabled="false"
+		android:focusable="true"
+		android:src="@drawable/plus"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:maxImageSize="36dp" />
+
+	<EditText
+		android:id="@+id/etSearchQwizes"
+		android:layout_width="0dp"
+		android:layout_height="50dp"
+		android:layout_marginStart="4dp"
+		android:layout_marginEnd="4dp"
+		android:autofillHints="@string/search"
+		android:ems="10"
+		android:hint="@string/search"
+		android:inputType="text"
+		app:layout_constraintEnd_toStartOf="@+id/bSearchQwizes"
+		app:layout_constraintHorizontal_bias="0.0"
+		app:layout_constraintStart_toEndOf="@+id/bFilterQwizes"
+		app:layout_constraintTop_toTopOf="parent" />
+
+	<ImageButton
+		android:id="@+id/bSearchQwizes"
+		android:layout_width="50dp"
+		android:layout_height="0dp"
+		android:background="#00FFFFFF"
+		android:contentDescription="@string/search"
+		android:padding="8dp"
+		android:scaleType="fitCenter"
+		android:src="@drawable/search"
+		app:layout_constraintBottom_toBottomOf="@+id/etSearchQwizes"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintTop_toTopOf="@+id/etSearchQwizes" />
+
+	<ImageButton
+		android:id="@+id/bFilterQwizes"
+		android:layout_width="50dp"
+		android:layout_height="0dp"
+		android:background="#00FFFFFF"
+		android:contentDescription="@string/sort_by"
+		android:padding="8dp"
+		android:scaleType="fitCenter"
+		android:src="@drawable/hamburger"
+		app:layout_constraintBottom_toTopOf="@+id/rvQwizPreviews"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toTopOf="@+id/etSearchQwizes" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

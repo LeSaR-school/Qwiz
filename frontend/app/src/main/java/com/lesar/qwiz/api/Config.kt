@@ -1,3 +1,3 @@
 package com.lesar.qwiz.api
 
-const val URL = "http://127.0.0.1:8000/api/"
+const val BASE_URL = "http://192.168.2.142:8000/api/"

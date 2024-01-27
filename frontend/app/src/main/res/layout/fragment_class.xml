@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:id="@+id/QwizPreviewLayout"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	tools:context=".fragment.ClassFragment" >
+
+	<com.google.android.material.floatingactionbutton.FloatingActionButton
+		android:id="@+id/bDeleteClass"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginEnd="8dp"
+		android:clickable="true"
+		android:enabled="false"
+		android:src="@drawable/delete"
+		android:visibility="gone"
+		app:elevation="0dp"
+		app:layout_constraintBottom_toBottomOf="@+id/tvClassName"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintTop_toTopOf="@+id/tvClassName"
+		app:maxImageSize="48dp"
+		tools:visibility="visible" />
+
+	<com.google.android.material.floatingactionbutton.FloatingActionButton
+		android:id="@+id/fabCreateAssignment"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginEnd="20dp"
+		android:layout_marginBottom="20dp"
+		android:clickable="true"
+		android:contentDescription="@string/qwiz_create"
+		android:enabled="false"
+		android:focusable="true"
+		android:src="@drawable/plus"
+		android:visibility="gone"
+		tools:visibility="visible"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:maxImageSize="36dp" />
+
+	<TextView
+		android:id="@+id/tvAssignments"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="8dp"
+		android:text="@string/assignments"
+		android:textAlignment="center"
+		android:textColor="?colorForeground"
+		android:textSize="48sp"
+		app:autoSizeMaxTextSize="48dp"
+		app:autoSizeMinTextSize="24dp"
+		app:autoSizeTextType="uniform"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintHorizontal_bias="0.0"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@+id/tvClassName" />
+
+	<TextView
+		android:id="@+id/tvClassName"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="8dp"
+		android:layout_marginTop="8dp"
+		android:layout_marginEnd="8dp"
+		android:text="@string/loading"
+		android:textColor="?colorForeground"
+		android:textSize="48sp"
+		app:autoSizeMaxTextSize="48dp"
+		app:autoSizeMinTextSize="24dp"
+		app:autoSizeTextType="uniform"
+		app:layout_constraintEnd_toStartOf="@+id/bDeleteClass"
+		app:layout_constraintHorizontal_bias="0.0"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toTopOf="parent" />
+
+	<androidx.recyclerview.widget.RecyclerView
+		android:id="@+id/rvAssignments"
+		android:layout_width="0dp"
+		android:layout_height="0dp"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@+id/tvAssignments" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

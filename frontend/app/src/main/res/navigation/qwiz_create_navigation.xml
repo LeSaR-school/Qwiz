@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:id="@+id/qwiz_create_navigation"
+	app:startDestination="@id/qwizCreateFragment">
+
+	<fragment
+		android:id="@+id/qwizCreateFragment"
+		android:name="com.lesar.qwiz.fragment.CreateQwizFragment"
+		tools:layout="@layout/fragment_create_qwiz"
+		android:label="fragment_qwiz_create">
+		<action
+			android:id="@+id/action_createQwizFragment_to_questionEditFragment"
+			app:destination="@id/questionEditFragment" />
+		<argument
+			android:name="copyEditId"
+			android:defaultValue="-1"
+			app:argType="integer" />
+		<argument
+			android:name="editing"
+			android:defaultValue="false"
+			app:argType="boolean" />
+	</fragment>
+	<fragment
+		android:id="@+id/questionEditFragment"
+		android:name="com.lesar.qwiz.fragment.QuestionEditFragment"
+		tools:layout="@layout/fragment_question_edit"
+		android:label="fragment_question_edit">
+		<argument
+			android:name="position"
+			android:defaultValue="-1"
+			app:argType="integer" />
+		<argument
+			android:name="body"
+			android:defaultValue=""
+			app:argType="string" />
+		<argument
+			android:name="answers"
+			android:defaultValue="@null"
+			app:argType="string[]"
+			app:nullable="true" />
+		<argument
+			android:name="correct"
+			android:defaultValue="-1"
+			app:argType="integer" />
+	</fragment>
+</navigation>

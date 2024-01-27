@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="80dp"
+	android:background="?attr/colorBackground">
+
+	<TextView
+		android:id="@+id/tvClassPreviewName"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="8dp"
+		android:layout_marginTop="8dp"
+		android:layout_marginEnd="10dp"
+		android:text="@string/loading"
+		android:textColor="?colorForeground"
+		android:textSize="24sp"
+		app:autoSizeMaxTextSize="24dp"
+		app:autoSizeMinTextSize="6dp"
+		app:autoSizeStepGranularity="2dp"
+		app:autoSizeTextType="uniform"
+		app:layout_constraintEnd_toStartOf="@+id/tvStudentsNumber"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toTopOf="parent" />
+
+	<TextView
+		android:id="@+id/tvTeacher"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginBottom="8dp"
+		android:alpha="0.7"
+		android:text="@string/teacher"
+		android:textColor="?colorForeground"
+		android:textSize="20dp"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintStart_toStartOf="@+id/tvClassPreviewName" />
+
+	<TextView
+		android:id="@+id/tvClassPreviewTeacher"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="10dp"
+		android:alpha="0.7"
+		android:text="@string/loading"
+		android:textColor="?colorForeground"
+		android:textSize="20dp"
+		app:autoSizeMaxTextSize="20dp"
+		app:autoSizeMinTextSize="6dp"
+		app:autoSizeStepGranularity="2dp"
+		app:autoSizeTextType="uniform"
+		app:layout_constraintBottom_toBottomOf="@+id/tvTeacher"
+		app:layout_constraintEnd_toEndOf="@+id/tvStudents"
+		app:layout_constraintStart_toEndOf="@+id/tvTeacher"
+		app:layout_constraintTop_toTopOf="@+id/tvTeacher" />
+
+	<TextView
+		android:id="@+id/tvStudentsNumber"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginEnd="5dp"
+		android:text="0"
+		android:textAlignment="textEnd"
+		android:textColor="?colorAccent"
+		android:textSize="20sp"
+		app:layout_constraintBottom_toBottomOf="@+id/tvClassPreviewName"
+		app:layout_constraintEnd_toStartOf="@+id/tvStudents"
+		app:layout_constraintTop_toTopOf="@+id/tvClassPreviewName" />
+
+	<TextView
+		android:id="@+id/tvStudents"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginEnd="8dp"
+		android:text="@string/students"
+		android:textColor="?colorAccent"
+		android:textSize="16sp"
+		app:layout_constraintBottom_toBottomOf="@+id/tvStudentsNumber"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintTop_toTopOf="@+id/tvStudentsNumber" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

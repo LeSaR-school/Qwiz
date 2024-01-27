@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:id="@+id/clCreateQwiz"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	tools:context=".fragment.CreateQwizFragment">
+
+	<TextView
+		android:id="@+id/tvCreateClosesAt"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="20dp"
+		android:text="@string/assignment_closes_at"
+		android:textColor="?colorForeground"
+		android:textSize="18sp"
+		app:layout_constraintStart_toStartOf="@+id/tvCreateOpensAt"
+		app:layout_constraintTop_toBottomOf="@+id/tvCreateOpensAt" />
+
+	<TextView
+		android:id="@+id/tvCreateCloseTime"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:text="-"
+		android:textColor="?colorForeground"
+		android:textSize="18sp"
+		app:layout_constraintBottom_toBottomOf="@+id/tvCreateClosesAt"
+		app:layout_constraintEnd_toStartOf="@+id/cbClosesAt"
+		app:layout_constraintStart_toEndOf="@+id/tvCreateClosesAt"
+		app:layout_constraintStart_toStartOf="@+id/tvCreateOpenTime"
+		app:layout_constraintTop_toTopOf="@+id/tvCreateClosesAt"
+		app:layout_constraintVertical_bias="1.0" />
+
+	<TextView
+		android:id="@+id/tvCreateAssignment"
+		android:layout_width="0dp"
+		android:layout_height="60dp"
+		android:layout_marginStart="8dp"
+		android:layout_marginTop="8dp"
+		android:layout_marginEnd="8dp"
+		android:text="@string/create_assignment"
+		android:textAlignment="center"
+		android:textColor="?colorForeground"
+		android:textSize="42sp"
+		app:autoSizeMaxTextSize="42dp"
+		app:autoSizeMinTextSize="20dp"
+		app:autoSizeTextType="uniform"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toTopOf="parent" />
+
+	<TextView
+		android:id="@+id/tvCreateOpensAt"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="8dp"
+		android:layout_marginTop="10dp"
+		android:text="@string/assignment_opens_at"
+		android:textColor="?colorForeground"
+		android:textSize="18sp"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@+id/flQwiz" />
+
+	<TextView
+		android:id="@+id/tvCreateOpenTime"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="8dp"
+		android:text="-"
+		android:textColor="?colorForeground"
+		android:textSize="18sp"
+		app:layout_constraintBottom_toBottomOf="@+id/tvCreateOpensAt"
+		app:layout_constraintEnd_toStartOf="@+id/cbOpensAt"
+		app:layout_constraintStart_toEndOf="@+id/tvCreateOpensAt"
+		app:layout_constraintTop_toTopOf="@+id/tvCreateOpensAt" />
+
+	<Button
+		android:id="@+id/bAssign"
+		style="@style/Widget.Material3.Button"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginBottom="10dp"
+		android:insetTop="0dp"
+		android:insetBottom="0dp"
+		android:text="@string/publish"
+		android:textAppearance="@style/TextAppearance.AppCompat.Large"
+		android:textColor="?colorForeground"
+		android:textSize="24sp"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent" />
+
+	<FrameLayout
+		android:id="@+id/flQwiz"
+		android:layout_width="0dp"
+		android:layout_height="80dp"
+		android:layout_marginTop="8dp"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintHorizontal_bias="0.0"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@+id/tvCreateAssignment">
+
+	</FrameLayout>
+
+	<CheckBox
+		android:id="@+id/cbOpensAt"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		app:layout_constraintBottom_toBottomOf="@+id/tvCreateOpensAt"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintTop_toTopOf="@+id/tvCreateOpensAt" />
+
+	<CheckBox
+		android:id="@+id/cbClosesAt"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		app:layout_constraintBottom_toBottomOf="@+id/tvCreateClosesAt"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintTop_toTopOf="@+id/tvCreateClosesAt" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

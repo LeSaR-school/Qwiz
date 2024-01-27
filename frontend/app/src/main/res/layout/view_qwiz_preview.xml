@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="80dp"
+	android:background="?attr/colorBackground">
+
+	<TextView
+		android:id="@+id/tvQwizPreviewName"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="10dp"
+		android:layout_marginEnd="10dp"
+		android:text="@string/loading"
+		android:textColor="?colorForeground"
+		android:textSize="24sp"
+		app:autoSizeMaxTextSize="24dp"
+		app:autoSizeMinTextSize="6dp"
+		app:autoSizeStepGranularity="2dp"
+		app:autoSizeTextType="uniform"
+		app:layout_constraintEnd_toStartOf="@+id/tvPreviewVotesNumber"
+		app:layout_constraintStart_toEndOf="@+id/ivQwizPreviewThumbnail"
+		app:layout_constraintTop_toTopOf="@+id/ivQwizPreviewThumbnail" />
+
+	<TextView
+		android:id="@+id/tvBy"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="8dp"
+		android:alpha="0.7"
+		android:gravity="bottom"
+		android:text="@string/by"
+		android:textColor="?colorForeground"
+		android:textSize="16sp"
+		app:layout_constraintBottom_toBottomOf="@+id/ivQwizPreviewThumbnail"
+		app:layout_constraintStart_toStartOf="@+id/tvQwizPreviewName"
+		app:layout_constraintTop_toBottomOf="@+id/tvQwizPreviewName" />
+
+	<TextView
+		android:id="@+id/tvQwizPreviewCreator"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="10dp"
+		android:layout_marginEnd="10dp"
+		android:alpha="0.7"
+		android:gravity="bottom"
+		android:text="@string/loading"
+		android:textColor="?colorForeground"
+		android:textSize="18sp"
+		app:autoSizeMaxTextSize="18dp"
+		app:autoSizeMinTextSize="6dp"
+		app:autoSizeTextType="none"
+		app:layout_constraintBottom_toBottomOf="@+id/tvBy"
+		app:layout_constraintEnd_toStartOf="@+id/tvCreateTime"
+		app:layout_constraintStart_toEndOf="@+id/tvBy" />
+
+	<TextView
+		android:id="@+id/tvPreviewVotesNumber"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginEnd="5dp"
+		android:text="0"
+		android:textAlignment="textEnd"
+		android:textColor="?colorAccent"
+		android:textSize="20sp"
+		app:layout_constraintEnd_toStartOf="@+id/tvPreviewVotes"
+		app:layout_constraintTop_toTopOf="@+id/tvQwizPreviewName" />
+
+	<TextView
+		android:id="@+id/tvPreviewVotes"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginEnd="10dp"
+		android:text="@string/votes"
+		android:textColor="?colorAccent"
+		android:textSize="16sp"
+		app:layout_constraintBottom_toBottomOf="@+id/tvPreviewVotesNumber"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintTop_toTopOf="@+id/tvPreviewVotesNumber" />
+
+	<TextView
+		android:id="@+id/tvCreateTime"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:alpha="0.7"
+		android:gravity="bottom"
+		android:text="@string/loading"
+		android:textColor="?attr/colorForeground"
+		android:textSize="16sp"
+		app:layout_constraintBottom_toBottomOf="@+id/tvQwizPreviewCreator"
+		app:layout_constraintEnd_toEndOf="@+id/tvPreviewVotes"
+		app:layout_constraintTop_toTopOf="@+id/tvQwizPreviewCreator" />
+
+	<ImageView
+		android:id="@+id/ivQwizPreviewThumbnail"
+		android:layout_width="64dp"
+		android:layout_height="64dp"
+		android:layout_marginStart="8dp"
+		android:layout_marginTop="8dp"
+		android:layout_marginBottom="8dp"
+		android:background="?attr/colorForeground"
+		android:scaleType="centerCrop"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toTopOf="parent"
+		app:srcCompat="@drawable/qwiz_placeholder" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

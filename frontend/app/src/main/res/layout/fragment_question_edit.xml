@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:id="@+id/clQuestionEdit"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	tools:context=".fragment.QuestionEditFragment" >
+
+	<com.google.android.material.floatingactionbutton.FloatingActionButton
+		android:id="@+id/bSaveQuestion"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginEnd="16dp"
+		android:clickable="true"
+		android:src="@drawable/save"
+		app:elevation="0dp"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintTop_toTopOf="@+id/ivEmbed"
+		app:maxImageSize="36dp" />
+
+	<com.google.android.material.floatingactionbutton.FloatingActionButton
+		android:id="@+id/bDeleteQuestion"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="10dp"
+		android:clickable="true"
+		android:enabled="false"
+		android:src="@drawable/delete"
+		app:elevation="0dp"
+		app:layout_constraintEnd_toEndOf="@+id/bSaveQuestion"
+		app:layout_constraintTop_toBottomOf="@+id/bSaveQuestion"
+		app:maxImageSize="48dp" />
+
+	<EditText
+		android:id="@+id/etBody"
+		android:layout_width="0dp"
+		android:layout_height="0dp"
+		android:layout_marginTop="16dp"
+		android:layout_marginBottom="16dp"
+		android:ems="10"
+		android:gravity="center"
+		android:hint="@string/question"
+		android:inputType="textMultiLine"
+		app:layout_constraintBottom_toTopOf="@+id/etAnswer1"
+		app:layout_constraintEnd_toEndOf="@+id/bSaveQuestion"
+		app:layout_constraintStart_toStartOf="@+id/ivEmbed"
+		app:layout_constraintTop_toBottomOf="@+id/ivEmbed" />
+
+	<EditText
+		android:id="@+id/etAnswer1"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="16dp"
+		android:layout_marginEnd="4dp"
+		android:ems="10"
+		android:gravity="start|top"
+		android:hint="@string/answer1"
+		android:inputType="textMultiLine"
+		android:textColor="?colorForeground"
+		app:layout_constraintBottom_toTopOf="@+id/etAnswer2"
+		app:layout_constraintEnd_toStartOf="@+id/rgCorrect"
+		app:layout_constraintStart_toStartOf="parent" />
+
+	<EditText
+		android:id="@+id/etAnswer2"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:ems="10"
+		android:gravity="start|top"
+		android:hint="@string/answer2"
+		android:inputType="textMultiLine"
+		android:textColor="?colorForeground"
+		app:layout_constraintBottom_toTopOf="@+id/etAnswer3"
+		app:layout_constraintEnd_toEndOf="@+id/etAnswer1"
+		app:layout_constraintHorizontal_bias="0.0"
+		app:layout_constraintStart_toStartOf="@+id/etAnswer1" />
+
+	<EditText
+		android:id="@+id/etAnswer3"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="4dp"
+		android:ems="10"
+		android:enabled="false"
+		android:gravity="start|top"
+		android:hint="@string/answer3"
+		android:inputType="textMultiLine"
+		android:textColor="?colorForeground"
+		app:layout_constraintBottom_toTopOf="@+id/etAnswer4"
+		app:layout_constraintEnd_toEndOf="@+id/etAnswer2"
+		app:layout_constraintStart_toEndOf="@+id/swEnable3" />
+
+	<Switch
+		android:id="@+id/swEnable3"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		app:layout_constraintBottom_toBottomOf="@+id/etAnswer3"
+		app:layout_constraintStart_toStartOf="@+id/etAnswer2"
+		app:layout_constraintTop_toTopOf="@+id/etAnswer3" />
+
+	<EditText
+		android:id="@+id/etAnswer4"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="4dp"
+		android:layout_marginBottom="8dp"
+		android:ems="10"
+		android:enabled="false"
+		android:gravity="start|top"
+		android:hint="@string/answer4"
+		android:inputType="textMultiLine"
+		android:textColor="?colorForeground"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintEnd_toEndOf="@+id/etAnswer3"
+		app:layout_constraintStart_toEndOf="@+id/swEnable4" />
+
+	<Switch
+		android:id="@+id/swEnable4"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:enabled="false"
+		app:layout_constraintBottom_toBottomOf="@+id/etAnswer4"
+		app:layout_constraintStart_toStartOf="@+id/etAnswer2"
+		app:layout_constraintTop_toTopOf="@+id/etAnswer4" />
+
+	<ImageView
+		android:id="@+id/ivEmbed"
+		android:layout_width="0dp"
+		android:layout_height="150dp"
+		android:layout_marginStart="16dp"
+		android:layout_marginTop="16dp"
+		android:layout_marginEnd="16dp"
+		android:background="?colorForeground"
+		android:scaleType="fitCenter"
+		android:src="@drawable/add_image"
+		app:layout_constraintEnd_toStartOf="@+id/bSaveQuestion"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toTopOf="parent" />
+
+	<RadioGroup
+		android:id="@+id/rgCorrect"
+		android:layout_width="wrap_content"
+		android:layout_height="0dp"
+		android:layout_marginEnd="-8dp"
+		app:layout_constraintBottom_toBottomOf="@+id/etAnswer4"
+		app:layout_constraintEnd_toEndOf="@+id/etBody"
+		app:layout_constraintTop_toTopOf="@+id/etAnswer1">
+
+		<RadioButton
+			android:id="@+id/rbCorrect1"
+			android:layout_width="match_parent"
+			android:layout_height="0dp"
+			android:layout_weight="1" />
+
+		<RadioButton
+			android:id="@+id/rbCorrect2"
+			android:layout_width="match_parent"
+			android:layout_height="0dp"
+			android:layout_weight="1" />
+
+		<RadioButton
+			android:id="@+id/rbCorrect3"
+			android:layout_width="match_parent"
+			android:layout_height="0dp"
+			android:layout_weight="1"
+			android:enabled="false" />
+
+		<RadioButton
+			android:id="@+id/rbCorrect4"
+			android:layout_width="match_parent"
+			android:layout_height="0dp"
+			android:layout_weight="1"
+			android:enabled="false" />
+	</RadioGroup>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

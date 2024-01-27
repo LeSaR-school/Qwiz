@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:id="@+id/qwiz_navigation"
+	app:startDestination="@id/qwizFullPreviewFragment">
+
+	<fragment
+		android:id="@+id/qwizFullPreviewFragment"
+		android:name="com.lesar.qwiz.fragment.QwizFullPreviewFragment"
+		tools:layout="@layout/fragment_qwiz_full_preview"
+		android:label="fragment_qwiz_full_preview">
+		<argument
+			android:name="qwizId"
+			app:argType="integer" />
+		<argument
+			android:name="assignmentId"
+			android:defaultValue="-1"
+			app:argType="integer" />
+		<action
+			android:id="@+id/action_qwizFullPreviewFragment_to_plainQuestionFragment"
+			app:destination="@id/plainQuestionFragment" />
+		<action
+			android:id="@+id/action_qwizFullPreviewFragment_to_qwiz_create_navigation"
+			app:destination="@id/qwiz_create_navigation">
+			<argument
+				android:name="copyEditId"
+				android:defaultValue="-1"
+				app:argType="integer" />
+			<argument
+				android:name="editing"
+				android:defaultValue="false"
+				app:argType="boolean" />
+		</action>
+	</fragment>
+
+	<fragment
+		android:id="@+id/plainQuestionFragment"
+		android:name="com.lesar.qwiz.fragment.QuestionFragment"
+		tools:layout="@layout/fragment_question"
+		android:label="fragment_plain_question">
+		<action
+			android:id="@+id/action_plainQuestionFragment_to_qwizResultFragment"
+			app:destination="@id/qwizResultFragment"
+			app:popUpTo="@id/qwizFullPreviewFragment"
+			app:popUpToInclusive="false" />
+	</fragment>
+
+	<fragment
+		android:id="@+id/qwizResultFragment"
+		android:name="com.lesar.qwiz.fragment.QwizResultFragment"
+		tools:layout="@layout/fragment_qwiz_result"
+		android:label="fragment_qwiz_result">
+		<argument
+			android:name="correct"
+			app:argType="integer" />
+		<argument
+			android:name="total"
+			app:argType="integer" />
+		<argument
+			android:name="finishedAssignment"
+			app:argType="boolean" />
+	</fragment>
+	<include app:graph="@navigation/qwiz_create_navigation" />
+</navigation>

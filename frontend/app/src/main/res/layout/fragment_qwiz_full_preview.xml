@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:id="@+id/fullQwizPreviewLayout"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	tools:context=".fragment.QwizFullPreviewFragment" >
+
+	<com.google.android.material.floatingactionbutton.FloatingActionButton
+		android:id="@+id/bDeleteQwiz"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginEnd="10dp"
+		android:clickable="true"
+		android:contentDescription="@string/delete"
+		android:enabled="false"
+		android:focusable="true"
+		android:src="@drawable/delete"
+		android:visibility="gone"
+		app:elevation="0dp"
+		app:layout_constraintBottom_toBottomOf="@+id/bCopyQwiz"
+		app:layout_constraintEnd_toStartOf="@+id/bCopyQwiz"
+		app:layout_constraintTop_toTopOf="@+id/bCopyQwiz"
+		app:maxImageSize="48dp"
+		tools:visibility="visible" />
+
+	<com.google.android.material.floatingactionbutton.FloatingActionButton
+		android:id="@+id/bCopyQwiz"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="10dp"
+		android:clickable="true"
+		android:contentDescription="@string/delete"
+		android:enabled="false"
+		android:focusable="true"
+		android:src="@drawable/copy"
+		app:elevation="0dp"
+		app:layout_constraintEnd_toEndOf="@+id/tvCreateTime"
+		app:layout_constraintTop_toBottomOf="@+id/tvCreateTime"
+		app:maxImageSize="30dp" />
+
+	<com.google.android.material.floatingactionbutton.FloatingActionButton
+		android:id="@+id/bEditQwiz"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginEnd="10dp"
+		android:clickable="true"
+		android:contentDescription="@string/delete"
+		android:enabled="false"
+		android:focusable="true"
+		android:src="@drawable/edit"
+		android:visibility="gone"
+		app:elevation="0dp"
+		app:layout_constraintBottom_toBottomOf="@+id/bDeleteQwiz"
+		app:layout_constraintEnd_toStartOf="@+id/bDeleteQwiz"
+		app:layout_constraintTop_toTopOf="@+id/bDeleteQwiz"
+		app:maxImageSize="34dp"
+		tools:visibility="visible" />
+
+	<Button
+		android:id="@+id/bTakeQwiz"
+		style="@style/Widget.Material3.Button"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginBottom="16dp"
+		android:enabled="false"
+		android:insetTop="0dp"
+		android:insetBottom="0dp"
+		android:text="@string/take_qwiz"
+		android:textAppearance="@style/TextAppearance.AppCompat.Large"
+		android:textColor="?colorForeground"
+		android:textSize="24sp"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent" />
+
+	<ImageView
+		android:id="@+id/ivQwizThumbnail"
+		android:layout_width="80dp"
+		android:layout_height="80dp"
+		android:layout_marginStart="10dp"
+		android:layout_marginTop="10dp"
+		android:background="?colorForeground"
+		android:importantForAccessibility="no"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toTopOf="parent"
+		android:src="@drawable/qwiz_placeholder" />
+
+	<TextView
+		android:id="@+id/tvQwizName"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="8dp"
+		android:layout_marginEnd="8dp"
+		android:text="@string/loading"
+		android:textColor="?colorPrimary"
+		android:textSize="34dp"
+		app:autoSizeMaxTextSize="34dp"
+		app:autoSizeMinTextSize="10dp"
+		app:autoSizeStepGranularity="2dp"
+		app:autoSizeTextType="uniform"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toEndOf="@+id/ivQwizThumbnail"
+		app:layout_constraintTop_toTopOf="@+id/ivQwizThumbnail" />
+
+	<TextView
+		android:id="@+id/tvBy"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:alpha="0.7"
+		android:text="@string/by"
+		android:textColor="?colorForeground"
+		android:textSize="16sp"
+		app:layout_constraintBottom_toBottomOf="@+id/tvQwizCreator"
+		app:layout_constraintStart_toStartOf="@+id/tvQwizName"
+		app:layout_constraintTop_toTopOf="@+id/tvQwizCreator"
+		app:layout_constraintVertical_bias="0.19999999" />
+
+	<TextView
+		android:id="@+id/tvQwizCreator"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="10dp"
+		android:layout_marginEnd="10dp"
+		android:alpha="0.7"
+		android:text="@string/loading"
+		android:textColor="?colorForeground"
+		android:textSize="20sp"
+		app:autoSizeMaxTextSize="20dp"
+		app:autoSizeMinTextSize="8dp"
+		app:autoSizeStepGranularity="2dp"
+		app:autoSizeTextType="uniform"
+		app:layout_constraintBottom_toBottomOf="@+id/ivQwizThumbnail"
+		app:layout_constraintEnd_toStartOf="@+id/tvCreateTime"
+		app:layout_constraintStart_toEndOf="@+id/tvBy" />
+
+	<TextView
+		android:id="@+id/tvVotes"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="9dp"
+		android:text="@string/votes"
+		android:textColor="?colorAccent"
+		android:textSize="20sp"
+		app:layout_constraintBottom_toBottomOf="@+id/tvVotesNumber"
+		app:layout_constraintStart_toEndOf="@+id/tvVotesNumber"
+		app:layout_constraintTop_toTopOf="@+id/tvVotesNumber" />
+
+	<TextView
+		android:id="@+id/tvVotesNumber"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="16dp"
+		android:text="0"
+		android:textAlignment="textEnd"
+		android:textColor="?colorAccent"
+		android:textSize="30sp"
+		app:layout_constraintStart_toStartOf="@+id/ivQwizThumbnail"
+		app:layout_constraintTop_toBottomOf="@+id/ivQwizThumbnail" />
+
+	<TextView
+		android:id="@+id/tvCreateTime"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:alpha="0.7"
+		android:text="@string/loading"
+		android:textColor="?attr/colorForeground"
+		android:textSize="14sp"
+		app:layout_constraintBottom_toBottomOf="@+id/ivQwizThumbnail"
+		app:layout_constraintEnd_toEndOf="@+id/tvQwizName" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

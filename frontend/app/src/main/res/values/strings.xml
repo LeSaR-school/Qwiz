@@ -1,6 +1,118 @@
 <resources>
-    <string name="app_name">Qwiz</string>
-    <string name="title_home">Home</string>
-    <string name="title_dashboard">Dashboard</string>
-    <string name="title_notifications">Notifications</string>
+	<string name="app_name" translatable="false">Qwiz</string>
+	<string name="loading">Loading…</string>
+	<string name="internal_error">Sorry, something went wrong!</string>
+	<string name="yes">Yes</string>
+	<string name="no">No</string>
+	<string name="ok">OK</string>
+	<string name="cancel">Cancel</string>
+	<string name="delete_question">Delete?</string>
+	<string name="out_of" translatable="false">%1$s / %2$s</string>
+	<string name="create">Create</string>
+
+	<!-- Search -->
+	<string name="search">Search</string>
+	<string name="sort_by">Sort by</string>
+	<string name="by_votes">Votes</string>
+	<string name="by_recent">Recent</string>
+
+	<!-- Profile strings -->
+	<string name="edit_profile">Edit</string>
+	<string name="sign_out">Sign out</string>
+	<string name="delete">Delete</string>
+	<string name="delete_account_confirm">Are you sure you want to delete your account?</string>
+	<string name="delete_account_success">Account deleted successfully</string>
+	<string name="apply_changes">Apply changes</string>
+	<string name="load_profile_fail">Could not load profile (are you connected to the internet?)</string>
+	<string name="update_profile_fail">Could not update profile (are you connected to the internet?)</string>
+	<string name="load_classes_fail">Could not load classes (are you connected to the internet?)</string>
+
+	<!-- Login strings -->
+	<string name="login">Log in</string>
+	<string name="login_ul"><u>Log in</u></string>
+	<string name="username">Username</string>
+	<string name="password">Password</string>
+	<string name="new_password">New password</string>
+	<string name="enter_username">Enter a username</string>
+	<string name="enter_password">Enter a password</string>
+	<string name="already_registered">Already registered?</string>
+	<string name="username_not_found">Username not found</string>
+	<string name="password_incorrect">Incorrect password</string>
+	<string name="login_fail">Could not log in (are you connected to the internet?)</string>
+
+	<!-- Register strings -->
+	<string name="register">Register</string>
+	<string name="register_ul"><u>Register</u></string>
+	<string name="confirm_password">Confirm password</string>
+	<string name="confirm_new_password">Confirm new password</string>
+	<string name="no_account">No account yet?</string>
+	<string name="username_taken">Username is already taken</string>
+	<string name="username_invalid_length">Your username must be from 3 to 12 characters long</string>
+	<string name="username_invalid_chars">Your username must only contain letters, digits, and underscores</string>
+	<string name="password_invalid_length">Your password must be at least 8 characters long</string>
+	<string name="password_lowercase">Your password must include at least 1 lowercase letter</string>
+	<string name="password_uppercase">Your password must include at least 1 uppercase letter</string>
+	<string name="password_digit">Your password must include at least 1 digit</string>
+	<string name="password_special_char">Your password must include at least 1 special character</string>
+	<string name="passwords_dont_match">Entered passwords don\'t match</string>
+	<string name="register_fail">Could not register (are you connected to the internet?)</string>
+	<string name="select_account_type">Select an account type</string>
+	<string name="student">Student</string>
+	<string name="teacher">Teacher</string>
+	<string name="parent">Parent</string>
+
+	<!-- Qwiz strings -->
+	<string name="by">by</string>
+	<string name="votes">votes</string>
+	<string name="take_qwiz">Take qwiz</string>
+	<string name="select_qwiz">Select a qwiz</string>
+	<string name="you_scored">You scored</string>
+	<string name="qwiz_not_found">Qwiz not found</string>
+	<string name="load_qwiz_fail">Could not load qwiz (are you connected to the internet?)</string>
+	<string name="load_qwiz_votes_fail">Could not load qwiz votes (are you connected to the internet?)</string>
+	<string name="load_qwiz_creator_fail">Could not load qwiz creator (are you connected to the internet?)</string>
+	<string name="solve_qwiz_fail">Could not solve qwiz (are you connected to the internet?)</string>
+	<string name="delete_qwiz_success">Qwiz deleted successfully</string>
+	<string name="delete_qwiz_fail">Could not delete qwiz (are you connected to the internet?)</string>
+
+	<!-- Create qwiz strings -->
+	<string name="qwiz_name">Qwiz name</string>
+	<string name="answers">answers</string>
+	<string name="publish">Publish</string>
+	<string name="question">Question</string>
+	<string name="answer1">Answer 1</string>
+	<string name="answer2">Answer 2</string>
+	<string name="answer3">Answer 3</string>
+	<string name="answer4">Answer 4</string>
+	<string name="delete_question_confirm">Are you sure you want to delete this question?</string>
+	<string name="qwiz_create">Create qwiz</string>
+	<string name="qwiz_create_fail">Enter a name and create at least 1 question</string>
+	<string name="qwiz_apply_edits">Apply edits</string>
+	<string name="qwiz_fill_in_question">Fill in the question</string>
+	<string name="qwiz_fill_answer_1">Fill in the first answer</string>
+	<string name="qwiz_fill_answer_2">Fill in the second answer</string>
+	<string name="qwiz_fill_answer_3">Fill in the third answer</string>
+	<string name="qwiz_fill_answer_4">Fill in the fourth answer</string>
+	<string name="qwiz_select_correct">Select the correct answer</string>
+	<string name="students">students</string>
+
+	<!-- Assignments -->
+	<string name="assignments">Assignments</string>
+	<string name="create_assignment">Create assignment</string>
+	<string name="assignments_load_fail">Could load assignments (are you connected to the internet?)</string>
+	<string name="no_assignments">This class does not have any assignments at the moment</string>
+	<string name="assignment_closes_at">Closes at:</string>
+	<string name="assignment_opens_at">Opens at:</string>
+	<string name="assignment_complete">Assignment complete</string>
+	<string name="assignment_not_opened">This assignment has not opened yet</string>
+	<string name="assignment_already_closed">This assignment has already closed</string>
+
+	<!-- Create class -->
+	<string name="search_no_students">Your search did not find any students</string>
+	<string name="select_students">Select students</string>
+	<string name="create_class">Create class</string>
+	<string name="class_name">Enter class name</string>
+	<string name="delete_class_confirm">Are you sure you want to delete this class?</string>
+	<string name="delete_class_fail">Could not delete class (are you connected to the internet?)</string>
+
 </resources>

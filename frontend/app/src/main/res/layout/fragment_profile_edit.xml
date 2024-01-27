@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:id="@+id/profileLayout"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	tools:context=".fragment.ProfileFragment">
+
+	<Button
+		android:id="@+id/bApplyChanges"
+		style="@style/Widget.Material3.Button"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginBottom="16dp"
+		android:insetTop="0dp"
+		android:insetBottom="0dp"
+		android:text="@string/apply_changes"
+		android:textAppearance="@style/TextAppearance.AppCompat.Large"
+		android:textColor="?colorForeground"
+		android:textSize="24sp"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent" />
+
+	<EditText
+		android:id="@+id/etNewUsername"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="12dp"
+		android:layout_marginEnd="12dp"
+		android:autofillHints="@string/username"
+		android:hint="@string/username"
+		android:inputType="text"
+		android:maxLength="12"
+		android:textAlignment="viewStart"
+		android:textAppearance="@style/TextAppearance.AppCompat.Large"
+		android:textColor="?colorPrimary"
+		android:textSize="40sp"
+		app:autoSizeMaxTextSize="40sp"
+		app:autoSizeMinTextSize="20sp"
+		app:autoSizeStepGranularity="2dp"
+		app:autoSizeTextType="uniform"
+		app:layout_constraintBottom_toBottomOf="@+id/ivProfilePicture"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toEndOf="@+id/ivProfilePicture"
+		app:layout_constraintTop_toTopOf="@+id/ivProfilePicture" />
+
+	<RadioGroup
+		android:id="@+id/rgNewAccountType"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+
+		android:layout_marginTop="20dp"
+		android:orientation="horizontal"
+		app:layout_constraintEnd_toEndOf="@+id/etNewUsername"
+		app:layout_constraintStart_toStartOf="@+id/ivProfilePicture"
+		app:layout_constraintTop_toBottomOf="@+id/ivProfilePicture">
+
+		<RadioButton
+			android:id="@+id/rbStudent"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:text="@string/student" />
+
+		<RadioButton
+			android:id="@+id/rbTeacher"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:text="@string/teacher" />
+
+		<RadioButton
+			android:id="@+id/rbParent"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:text="@string/parent" />
+	</RadioGroup>
+
+	<EditText
+		android:id="@+id/etNewPassword"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="12dp"
+		android:autofillHints="@string/username"
+		android:hint="@string/new_password"
+		android:inputType="textVisiblePassword"
+		android:textAlignment="viewStart"
+		android:textAppearance="@style/TextAppearance.AppCompat.Large"
+		android:textColor="?colorPrimary"
+		android:textSize="24sp"
+		app:autoSizeMaxTextSize="40sp"
+		app:autoSizeMinTextSize="20sp"
+		app:autoSizeStepGranularity="2dp"
+		app:autoSizeTextType="uniform"
+		app:layout_constraintEnd_toEndOf="@+id/rgNewAccountType"
+		app:layout_constraintHorizontal_bias="0.0"
+		app:layout_constraintStart_toStartOf="@+id/rgNewAccountType"
+		app:layout_constraintTop_toBottomOf="@+id/rgNewAccountType" />
+
+	<EditText
+		android:id="@+id/etNewPasswordConfirm"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="10dp"
+		android:autofillHints="@string/username"
+		android:hint="@string/confirm_new_password"
+		android:inputType="textVisiblePassword"
+		android:textAlignment="viewStart"
+		android:textAppearance="@style/TextAppearance.AppCompat.Large"
+		android:textColor="?colorPrimary"
+		android:textSize="24sp"
+		app:autoSizeMaxTextSize="40sp"
+		app:autoSizeMinTextSize="20sp"
+		app:autoSizeStepGranularity="2dp"
+		app:autoSizeTextType="uniform"
+		app:layout_constraintEnd_toEndOf="@+id/rgNewAccountType"
+		app:layout_constraintHorizontal_bias="0.0"
+		app:layout_constraintStart_toStartOf="@+id/rgNewAccountType"
+		app:layout_constraintTop_toBottomOf="@+id/etNewPassword" />
+
+	<ImageView
+		android:id="@+id/ivProfilePicture"
+		android:layout_width="100dp"
+		android:layout_height="100dp"
+		android:layout_marginStart="12dp"
+		android:layout_marginTop="12dp"
+		android:background="?attr/colorForeground"
+		android:clickable="true"
+		android:importantForAccessibility="no"
+		android:src="@drawable/add_image"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toTopOf="parent"
+		android:focusable="true" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
