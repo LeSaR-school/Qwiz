@@ -1,4 +1,5 @@
 use crate::account::Account;
+use crate::{db_err_to_status, internal_err};
 use crate::vote::{Vote, NewVoteData, VoteError};
 use rocket::{Route, http::Status, serde::json::Json};
 use serde::Deserialize;
@@ -69,52 +70,24 @@ async fn add_vote(qwiz_id: i32, vote_data: Json<PutVoteData>) -> Status {
 
 	let mut account = match Account::get_by_id(&vote_data.voter_id).await {
 		Ok(acc) => acc,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Status::Unauthorized
-			
-		},
+		Err(e) => return db_err_to_status(&e, Status::Unauthorized),
 	};
 
 	match account.verify_password(&vote_data.voter_password).await {
 		Ok(true) => (),
 		Ok(false) => return Status::Unauthorized,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Status::InternalServerError
-
-		},
+		Err(e) => return internal_err(&e),
 	}
 
 
 
-	match Vote::exists(&vote_data.voter_id, &qwiz_id).await {
-		Ok(true) => Status::NoContent,
-		Ok(false) => {
-			match Vote::from_vote_data(NewVoteData { voter_id: vote_data.voter_id, qwiz_id }).await {
-				Ok(_) => Status::Ok,
-				Err(Sqlx(e)) => {
-
-					eprintln!("{e}");
-					Status::InternalServerError
-
-				},
-				Err(QwizNotFound) => Status::NotFound,
-				Err(SelfVote) => Status::Forbidden,
-			}
-		},
-		Err(Sqlx(e)) => {
-
-			eprintln!("{e}");
-			Status::InternalServerError
-
-		},
+	match Vote::from_vote_data(NewVoteData { voter_id: vote_data.voter_id, qwiz_id }).await {
+		Ok(_) => Status::Ok,
+		Err(Sqlx(e)) => db_err_to_status(&e, Status::Conflict),
 		Err(QwizNotFound) => Status::NotFound,
-		Err(SelfVote) => Status::InternalServerError,
+		Err(SelfVote) => Status::Forbidden,
 	}
-
+	
 }
 
 
@@ -132,23 +105,13 @@ async fn delete_vote(qwiz_id: i32, delete_vote_data: Json<DeleteVoteData>) -> St
 
 	let mut account = match Account::get_by_id(&delete_vote_data.voter_id).await {
 		Ok(acc) => acc,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Status::Unauthorized
-			
-		},
+		Err(e) => return db_err_to_status(&e, Status::Unauthorized),
 	};
 
 	match account.verify_password(&delete_vote_data.voter_password).await {
 		Ok(true) => (),
 		Ok(false) => return Status::Unauthorized,
-		Err(e) => {
-
-			eprintln!("{e}");
-			return Status::InternalServerError
-
-		},
+		Err(e) => return internal_err(&e),
 	}
 
 
@@ -158,20 +121,10 @@ async fn delete_vote(qwiz_id: i32, delete_vote_data: Json<DeleteVoteData>) -> St
 		Ok(Some(vote)) => {
 			match vote.delete().await {
 				Ok(_) => Status::Ok,
-				Err(e) => {
-
-					eprintln!("{e}");
-					Status::InternalServerError
-
-				},
+				Err(e) => internal_err(&e),
 			}
 		},
-		Err(Sqlx(e)) => {
-
-			eprintln!("{e}");
-			Status::InternalServerError
-
-		},
+		Err(Sqlx(e)) => internal_err(&e),
 		Err(QwizNotFound) => Status::NotFound,
 		Err(SelfVote) => Status::InternalServerError,
 	}

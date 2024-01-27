@@ -15,6 +15,7 @@ pub fn all() -> Vec<Route> {
 		account_info,
 		get_account_by_id,
 		get_account_by_username,
+		get_accounts_with_prefix,
 		verify_password_by_id,
 		verify_password_by_username,
 		create_account,
@@ -33,6 +34,7 @@ enum AccountType ( "Student", "Parent", "Teacher" )
 
 GET /account/<id> - get account data by id
 GET /account/<username> - get account data by username
+GET /account/search?username_prefix - get accounts with usernames starting with a prefix
 
 POST /account - create an account
 username: String - required
@@ -60,6 +62,9 @@ POST /account/<id>/classes - get student/teacher account classes
 password: String - required
 
 POST /account/<id>/assignments - get student assignments
+password: String - required
+
+POST /account/<id>/qwizes - get account qwizes
 password: String - required
 
 POST /account/<id>/verify - verify password by id
@@ -113,6 +118,30 @@ async fn get_account_by_username(username: String) -> Result<Json<GetAccountData
 		Ok(account) => Ok(Json(GetAccountData::from_account(account).await)),
 		Err(e) => Err(db_err_to_status(&e, Status::NotFound)),
 	}
+
+}
+
+#[derive(Serialize)]
+struct IdUsernameData {
+	id: i32,
+	username: String,
+}
+
+#[get("/account/search?<username_prefix>&<is_student>")]
+async fn get_accounts_with_prefix(username_prefix: String, is_student: Option<bool>) -> Result<Json<Vec<IdUsernameData>>, Status> {
+
+	Ok(Json(
+		match is_student {
+			Some(true) => match Account::find_students(&username_prefix).await {
+				Ok(accs) => accs,
+				Err(e) => return Err(internal_err(&e)),
+			},
+			_ => Account::find_users(&username_prefix).await,
+		}
+		.into_iter()
+		.map(|(id, username)| IdUsernameData{id, username})
+		.collect()
+	))
 
 }
 

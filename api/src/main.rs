@@ -18,6 +18,7 @@ use crate::account::Account;
 use core::fmt;
 use std::{str::FromStr, env::var, ops::Deref};
 use rocket::{http::Status, Request, fs::{FileServer, relative}};
+use serde::Serialize;
 use sqlx::{Pool, Postgres, postgres::{PgPoolOptions, PgConnectOptions}, ConnectOptions};
 use async_once::AsyncOnce;
 use dotenv::dotenv;
@@ -124,6 +125,36 @@ impl From<Option<bool>> for OptBool {
 }
 impl Deref for OptBool {
 	type Target = bool;
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
+}
+
+#[derive(Serialize)]
+pub struct OptU32(pub u32);
+impl From<u32> for OptU32 {
+	fn from(value: u32) -> Self {
+		Self(value)
+	}
+}
+impl From<Option<u32>> for OptU32 {
+	fn from(value: Option<u32>) -> Self {
+		Self(value.unwrap_or(0))
+	}
+}
+impl From<Option<i32>> for OptU32 {
+	fn from(value: Option<i32>) -> Self {
+		Self(value.unwrap_or(0) as u32)
+	}
+}
+impl From<Option<i64>> for OptU32 {
+	fn from(value: Option<i64>) -> Self {
+		Self(value.unwrap_or(0) as u32)
+	}
+}
+impl Deref for OptU32 {
+	type Target = u32;
 
 	fn deref(&self) -> &Self::Target {
 		&self.0

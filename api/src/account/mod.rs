@@ -100,8 +100,7 @@ impl NewAccountError {
 
 
 lazy_static! {
-	static ref IDS: Mutex<Vec<i32>> = Mutex::new(vec![]);
-	static ref USERNAMES: Mutex<Vec<String>> = Mutex::new(vec![]);
+	static ref IDS_USERNAMES: Mutex<Vec<(i32, String)>> = Mutex::new(vec![]);
 }
 
 
@@ -119,41 +118,58 @@ impl Account {
 
 	pub async fn load_cache() -> sqlx::Result<()> {
 
-		let (db_ids, db_usernames): (Vec<i32>, Vec<String>) = sqlx::query!(
+		let db_ids_usernames: Vec<(i32, String)> = sqlx::query!(
 			"SELECT id, username FROM account"
 		)
 		.fetch_all(POOL.get().await)
 		.await?
 		.into_iter()
 		.map(|r| (r.id, r.username))
-		.unzip();
+		.collect();
 
-		*IDS.lock().await = db_ids;
-		*USERNAMES.lock().await = db_usernames;
+		*IDS_USERNAMES.lock().await = db_ids_usernames;
 
 		Ok(())
 
 	}
 
-	async fn cache_id(id: &i32) {
+	async fn cache_id_username(id: &i32, username: &String) {
 
-		IDS.lock().await.push(*id)
+		IDS_USERNAMES.lock().await.push((*id, username.to_owned()))
 
 	}
 	async fn uncache_id(id: &i32) {
 
-		IDS.lock().await.retain(|i| i != id)
-
-	}
-
-	async fn cache_username(username: &String) {
-
-		USERNAMES.lock().await.push(username.to_owned())
+		IDS_USERNAMES.lock().await.retain(|(i, _)| i != id)
 
 	}
 	async fn uncache_username(username: &String) {
 
-		USERNAMES.lock().await.retain(|u| u != username)
+		IDS_USERNAMES.lock().await.retain(|(_, u)| u != username)
+
+	}
+
+	async fn find_users(username_prefix: &String) -> Vec<(i32, String)> {
+
+		let mut idus: Vec<(i32, String)> = IDS_USERNAMES.lock().await.clone().into_iter().filter(|(_, username)| username.to_lowercase().starts_with(&username_prefix.to_lowercase())).collect();
+		idus.sort_by(|idu1, idu2| idu1.1.cmp(&idu2.1));
+		idus
+
+	}
+
+	async fn find_students(username_prefix: &String) -> sqlx::Result<Vec<(i32, String)>> {
+
+		Ok(
+			sqlx::query!(
+				"SELECT id, username FROM account WHERE LOWER(username) LIKE LOWER($1) AND account_type = 'student'",
+				format!("{username_prefix}%")
+			)
+			.fetch_all(POOL.get().await)
+			.await?
+			.into_iter()
+			.map(|r| (r.id, r.username))
+			.collect()
+		)
 
 	}
 
@@ -161,12 +177,12 @@ impl Account {
 
 	pub async fn exists_id(id: &i32) -> bool {
 
-		IDS.lock().await.contains(id)
+		IDS_USERNAMES.lock().await.iter().filter(|(i, _)| i == id).count() > 0
 
 	}
 	pub async fn exists_username(username: &String) -> bool {
 
-		USERNAMES.lock().await.contains(username)
+		IDS_USERNAMES.lock().await.iter().filter(|(_, u)| u == username).count() > 0
 
 	}
 	
@@ -226,8 +242,7 @@ impl Account {
 		.fetch_one(POOL.get().await)
 		.await?;
 
-		Self::cache_id(&account.id).await;
-		Self::cache_username(&account.username).await;
+		Self::cache_id_username(&account.id, &account.username).await;
 
 		Ok(account)
 	

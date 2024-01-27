@@ -21,7 +21,9 @@ pub fn all() -> Vec<Route> {
 
 #[derive(Serialize)]
 struct GetAssignmentData {
+	id: i32,
 	qwiz_id: i32,
+	qwiz_name: String,
 	class_id: i32,
 	open_time: Option<i64>,
 	close_time: Option<i64>,
@@ -30,7 +32,9 @@ struct GetAssignmentData {
 impl From<Assignment> for GetAssignmentData {
 	fn from(value: Assignment) -> Self {
 		Self {
+			id: value.id,
 			qwiz_id: value.qwiz_id,
+			qwiz_name: value.qwiz_name.unwrap_or("None".to_owned()),
 			class_id: value.class_id,
 			open_time: value.open_time.map(|ts| ts.timestamp()),
 			close_time: value.close_time.map(|ts| ts.timestamp()),
@@ -62,11 +66,11 @@ async fn get_account_assignments(id: i32, get_assignments_data: Json<GetAssignme
 
 
 
-	if account.account_type != AccountType::Student {
-		return Err(Right(BadRequest(Some("not a student"))))
+	if !matches!(account.account_type, AccountType::Student | AccountType::Teacher) {
+		return Err(Right(BadRequest(Some("not a teacher or student"))))
 	}
 
-	match Assignment::get_all_by_student_id(&account.id).await {
+	match Assignment::get_all_by_account_id(&account.id).await {
 		Ok(assignments) => Ok(Json(assignments.into_iter().map(From::from).collect())),
 		Err(e) => Err(Left(internal_err(&e))),
 	}

@@ -2,7 +2,7 @@ pub mod routes;
 
 
 
-use crate::POOL;
+use crate::{POOL, OptU32};
 use crate::qwiz::routes::GetShortQwizData;
 use crate::media::{Media, NewMediaData, MediaError};
 use std::cmp::Ordering;
@@ -93,6 +93,7 @@ pub struct Qwiz {
 	thumbnail_uuid: Option<Uuid>,
 	public: bool,
 	create_time: NaiveDateTime,
+	votes: OptU32,
 }
 
 impl Qwiz {
@@ -113,12 +114,29 @@ impl Qwiz {
 
 		sqlx::query_as!(
 			Qwiz,
-			"SELECT * FROM qwiz WHERE id=$1",
+			"SELECT *, (SELECT COUNT(*) FROM vote WHERE qwiz_id=$1) as votes FROM qwiz WHERE id=$1",
 			id
 		)
 		.fetch_one(POOL.get().await)
 		.await
 	
+	}
+	pub async fn get_by_creator(creator_id: &i32) -> sqlx::Result<Vec<GetShortQwizData>> {
+
+		sqlx::query_as!(
+			GetShortQwizData,
+			r#"SELECT id, name,
+			(SELECT uri FROM media WHERE uuid=thumbnail_uuid) AS thumbnail_uri,
+			(SELECT COUNT(*) FROM vote WHERE qwiz_id=id) AS votes,
+			(SELECT username FROM account WHERE id=creator_id) AS creator_name,
+			(SELECT uri FROM media WHERE uuid=(SELECT profile_picture_uuid FROM account WHERE id=creator_id)) as creator_profile_picture_uri,
+			CAST(EXTRACT(EPOCH FROM create_time) * 1000 AS BIGINT) AS create_time
+			FROM qwiz WHERE creator_id=$1"#,
+			creator_id
+		)
+		.fetch_all(POOL.get().await)
+		.await
+
 	}
 
 	pub async fn from_qwiz_data(data: &NewQwizData) -> Result<Self, MediaError> {
@@ -138,7 +156,7 @@ impl Qwiz {
 
 		sqlx::query_as!(
 			Qwiz,
-			"INSERT INTO qwiz (name, creator_id, thumbnail_uuid, public) VALUES ($1, $2, $3, $4) RETURNING *",
+			"INSERT INTO qwiz (name, creator_id, thumbnail_uuid, public) VALUES ($1, $2, $3, $4) RETURNING *, 0 as votes",
 			&data.name,
 			&data.creator_id,
 			thumbnail_uuid,
@@ -233,9 +251,9 @@ impl Qwiz {
 			(SELECT username FROM account WHERE id=creator_id) AS creator_name,
 			(SELECT uri FROM media WHERE uuid=(SELECT profile_picture_uuid FROM account WHERE id=creator_id)) as creator_profile_picture_uri,
 			CAST(EXTRACT(EPOCH FROM create_time) * 1000 AS BIGINT) AS create_time
-			FROM qwiz WHERE public AND name LIKE $1
+			FROM qwiz WHERE public AND LOWER(name) LIKE LOWER($1)
 			ORDER BY votes LIMIT 50 OFFSET $2"#,
-			format!("{name}%"),
+			format!("%{name}%"),
 			page * 50,
 		)
 		.fetch_all(POOL.get().await)
@@ -243,7 +261,7 @@ impl Qwiz {
 
 	}
 
-	pub async fn get_recent(days: u16, page: i64) -> sqlx::Result<Vec<GetShortQwizData>> {
+	pub async fn get_recent(days: u16, page: i64, name: &String) -> sqlx::Result<Vec<GetShortQwizData>> {
 
 		sqlx::query_as!(
 			GetShortQwizData,
@@ -253,9 +271,10 @@ impl Qwiz {
 			(SELECT username FROM account WHERE id=creator_id) AS creator_name,
 			(SELECT uri FROM media WHERE uuid=(SELECT profile_picture_uuid FROM account WHERE id=creator_id)) as creator_profile_picture_uri,
 			CAST(EXTRACT(EPOCH FROM create_time AT TIME ZONE 'UTC') * 1000 AS BIGINT) AS create_time
-			FROM qwiz WHERE public AND create_time >= (NOW() - MAKE_INTERVAL(days => $1))
-			ORDER BY votes LIMIT 50 OFFSET $2"#,
+			FROM qwiz WHERE public AND create_time >= (NOW() - MAKE_INTERVAL(days => $1)) and LOWER(name) LIKE LOWER($2)
+			ORDER BY votes LIMIT 50 OFFSET $3"#,
 			days as i32,
+			format!("%{name}%"),
 			page * 50,
 		)
 		.fetch_all(POOL.get().await)

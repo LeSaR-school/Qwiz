@@ -1,4 +1,4 @@
-use crate::{BASE_URL, internal_err, db_err_to_status};
+use crate::{BASE_URL, internal_err, db_err_to_status, OptU32};
 use crate::assignment::Assignment;
 use crate::account::Account;
 use crate::qwiz::{Qwiz, QwizSolveError};
@@ -22,6 +22,7 @@ pub fn all() -> Vec<Route> {
 	routes![
 		qwiz_info,
 		get_qwiz_by_id,
+		get_account_qwizes,
 		get_best,
 		get_recent,
 		create_qwiz,
@@ -41,7 +42,7 @@ GET /qwiz/<id> - get qwiz data by id
 
 GET /qwiz/best?<page>&<search> - get 50 best qwizes by name, rated by votes
 
-GET /qwiz/recent?<page> - get 50 best qwizes created in the last 2 weeks, rated by votes
+GET /qwiz/recent?<page>&<search> - get 50 best qwizes created in the last 2 weeks by name, rated by votes
 
 POST /qwiz - create a qwiz
 creator_password: String - required
@@ -92,6 +93,7 @@ struct GetFullQwizData {
 	questions: Vec<GetQuestionData>,
 	public: bool,
 	create_time: i64,
+	votes: u32,
 }
 impl GetFullQwizData {
 
@@ -114,6 +116,7 @@ impl GetFullQwizData {
 				questions,
 				public: qwiz.public,
 				create_time: qwiz.create_time.timestamp_millis(),
+				votes: *qwiz.votes,
 			}
 		)
 
@@ -138,12 +141,39 @@ async fn get_qwiz_by_id(id: i32) -> Result<Json<GetFullQwizData>, Status> {
 
 
 
+#[derive(Deserialize)]
+struct GetAccountQwizesData {
+	password: String,
+}
+#[post("/account/<account_id>/qwizes", data = "<get_account_qwizes_data>")]
+async fn get_account_qwizes(account_id: i32, get_account_qwizes_data: Json<GetAccountQwizesData>) -> Result<Json<Vec<GetShortQwizData>>, Status> {
+	
+	let mut account = match Account::get_by_id(&account_id).await {
+		Ok(acc) => acc,
+		Err(_) => return Err(Status::NotFound),
+	};
+
+	match account.verify_password(&get_account_qwizes_data.password).await {
+		Ok(true) => (),
+		Ok(false) => return Err(Status::Unauthorized),
+		Err(e) => return Err(internal_err(&e)),
+	};
+
+	match Qwiz::get_by_creator(&account_id).await {
+		Ok(qwizes) => Ok(Json(qwizes)),
+		Err(e) => Err(internal_err(&e)),
+	}
+
+}
+
+
+
 #[derive(Serialize)]
 pub struct GetShortQwizData {
 	pub id: i32,
 	pub name: String,
 	pub thumbnail_uri: Option<String>,
-	pub votes: Option<i64>,
+	pub votes: OptU32,
 	pub creator_name: Option<String>,
 	pub creator_profile_picture_uri: Option<String>,
 	pub create_time: Option<i64>,
@@ -169,10 +199,10 @@ async fn get_best(page: Option<u32>, search: Option<String>) -> Result<Json<Vec<
 
 }
 
-#[get("/qwiz/recent?<page>")]
-async fn get_recent(page: Option<u32>) -> Result<Json<Vec<GetShortQwizData>>, Status> {
+#[get("/qwiz/recent?<page>&<search>")]
+async fn get_recent(page: Option<u32>, search: Option<String>) -> Result<Json<Vec<GetShortQwizData>>, Status> {
 	
-	match Qwiz::get_recent(14, page.unwrap_or(0) as i64).await {
+	match Qwiz::get_recent(14, page.unwrap_or(0) as i64, &search.unwrap_or("".to_owned())).await {
 		Ok(datas) => Ok(Json(datas)),
 		Err(e) => Err(db_err_to_status(&e, Status::BadRequest)),
 	}
@@ -356,6 +386,7 @@ async fn solve_qwiz(qwiz_id: i32, solve_qwiz_data: Json<PostSolveQwizData>, assi
 	};
 
 
+	println!("{assignment_id:?}");
 
 	match (assignment_id, &solve_qwiz_data.username) {
 		(Some(id), Some(username)) => {
