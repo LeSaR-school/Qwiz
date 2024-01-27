@@ -46,7 +46,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
 
-		sharedPrefs = requireActivity().getSharedPreferences("user", Context.MODE_PRIVATE)
+		sharedPrefs = requireActivity().getSharedPreferences("user", Context.MODE_MULTI_PROCESS)
 		val id = sharedPrefs.getInt("id", -1)
 
 		if (id >= 0) {

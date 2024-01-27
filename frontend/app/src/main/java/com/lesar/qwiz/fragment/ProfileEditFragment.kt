@@ -201,7 +201,7 @@ class ProfileEditFragment : Fragment(R.layout.fragment_profile_edit) {
 	}
 
 	private fun savePrefs(username: String?, password: String?) {
-		val sharedPrefs = requireActivity().getSharedPreferences("user", Context.MODE_PRIVATE)
+		val sharedPrefs = requireActivity().getSharedPreferences("user", Context.MODE_MULTI_PROCESS)
 		val editor = sharedPrefs.edit()
 		username?.let {
 			editor.putString("username", it)

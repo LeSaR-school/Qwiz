@@ -72,7 +72,7 @@ class CreateAssignmentFragment : Fragment(R.layout.fragment_create_qwiz) {
 
 		qwizPreview.setOnClickListener {
 
-			val sharedPrefs = requireActivity().getSharedPreferences("user", Context.MODE_PRIVATE)
+			val sharedPrefs = requireActivity().getSharedPreferences("user", Context.MODE_MULTI_PROCESS)
 			val id = sharedPrefs.getInt("id", -1)
 			val password = sharedPrefs.getString("password", null)
 			if (id < 0 || password == null) {
@@ -108,7 +108,7 @@ class CreateAssignmentFragment : Fragment(R.layout.fragment_create_qwiz) {
 				Toast.makeText(context, R.string.select_qwiz, Toast.LENGTH_SHORT).show()
 				return@setOnClickListener
 			}
-			val sharedPrefs = requireActivity().getSharedPreferences("user", Context.MODE_PRIVATE)
+			val sharedPrefs = requireActivity().getSharedPreferences("user", Context.MODE_MULTI_PROCESS)
 			val password = sharedPrefs.getString("password", null)
 			password?.let {
 				binding.bAssign.isEnabled = false

@@ -59,7 +59,7 @@ class CreateClassFragment : Fragment(R.layout.fragment_create_class) {
 
 		binding.bCreateClass.setOnClickListener {
 
-			val sharedPrefs = requireContext().getSharedPreferences("user", Context.MODE_PRIVATE)
+			val sharedPrefs = requireContext().getSharedPreferences("user", Context.MODE_MULTI_PROCESS)
 			val id = sharedPrefs.getInt("id", -1)
 			val password = sharedPrefs.getString("password", "")
 			if (id < 0 || password == null) {

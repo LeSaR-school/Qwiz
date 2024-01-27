@@ -1,6 +1,6 @@
 package com.lesar.qwiz.fragment
 
-import android.content.Context.MODE_PRIVATE
+import android.content.Context.MODE_MULTI_PROCESS
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -102,7 +102,7 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
 	}
 
 	private fun savePrefs(id: Int, username: String, password: String) {
-		val sharedRefs = requireActivity().getSharedPreferences("user", MODE_PRIVATE)
+		val sharedRefs = requireActivity().getSharedPreferences("user", MODE_MULTI_PROCESS)
 		val editor = sharedRefs.edit()
 		editor.putInt("id", id)
 		editor.putString("username", username)

@@ -1,7 +1,7 @@
 package com.lesar.qwiz.fragment
 
 import android.app.Activity
-import android.content.Context.MODE_PRIVATE
+import android.content.Context.MODE_MULTI_PROCESS
 import android.content.Intent
 import android.os.Bundle
 import android.provider.MediaStore
@@ -97,7 +97,7 @@ class CreateQwizFragment : Fragment(R.layout.fragment_create_qwiz) {
 		}
 
 		binding.bPublish.setOnClickListener {
-			val sharedPrefs = requireActivity().getSharedPreferences("user", MODE_PRIVATE)
+			val sharedPrefs = requireActivity().getSharedPreferences("user", MODE_MULTI_PROCESS)
 			val id = sharedPrefs.getInt("id", -1)
 			val password = sharedPrefs.getString("password", null)
 			if (id >= 0 && password != null) {

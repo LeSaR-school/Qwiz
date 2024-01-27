@@ -1,6 +1,6 @@
 package com.lesar.qwiz.fragment
 
-import android.content.Context.MODE_PRIVATE
+import android.content.Context.MODE_MULTI_PROCESS
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -49,7 +49,7 @@ class TopBarFragment : Fragment(R.layout.fragment_top_bar) {
 
 	private fun loadSharedPrefs() {
 
-		val sharedPrefs = requireActivity().getSharedPreferences("user", MODE_PRIVATE)
+		val sharedPrefs = requireActivity().getSharedPreferences("user", MODE_MULTI_PROCESS)
 
 		val id = sharedPrefs.getInt("id", -1)
 		val password = sharedPrefs.getString("password", null)
@@ -85,7 +85,7 @@ class TopBarFragment : Fragment(R.layout.fragment_top_bar) {
 								.into(binding.ivProfile)
 						}
 
-						val sharedPrefs = requireActivity().getSharedPreferences("user", MODE_PRIVATE)
+						val sharedPrefs = requireActivity().getSharedPreferences("user", MODE_MULTI_PROCESS)
 						sharedPrefs.edit().putString("username", account.username).apply()
 					}
 				}

@@ -1,6 +1,6 @@
 package com.lesar.qwiz.fragment
 
-import android.content.Context.MODE_PRIVATE
+import android.content.Context.MODE_MULTI_PROCESS
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
@@ -78,7 +78,7 @@ class QuestionFragment : Fragment(R.layout.fragment_question) {
 	}
 
 	private fun finishQwiz() {
-		val sharedPrefs = requireActivity().getSharedPreferences("user", MODE_PRIVATE)
+		val sharedPrefs = requireActivity().getSharedPreferences("user", MODE_MULTI_PROCESS)
 		val username = sharedPrefs.getString("username", null)
 		viewModel.solveQwiz(username, qwizViewModel.qwiz.id, qwizViewModel.assignmentId)
 	}

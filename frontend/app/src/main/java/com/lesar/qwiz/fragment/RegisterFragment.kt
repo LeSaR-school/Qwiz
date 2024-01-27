@@ -162,7 +162,7 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
 	}
 
 	private fun savePrefs(id: Int, username: String, password: String) {
-		val sharedRefs = requireActivity().getSharedPreferences("user", Context.MODE_PRIVATE)
+		val sharedRefs = requireActivity().getSharedPreferences("user", Context.MODE_MULTI_PROCESS)
 		val editor = sharedRefs.edit()
 		editor.putInt("id", id)
 		editor.putString("username", username)

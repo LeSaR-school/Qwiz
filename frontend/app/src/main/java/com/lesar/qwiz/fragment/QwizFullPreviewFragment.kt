@@ -1,6 +1,6 @@
 package com.lesar.qwiz.fragment
 
-import android.content.Context.MODE_PRIVATE
+import android.content.Context.MODE_MULTI_PROCESS
 import android.icu.text.SimpleDateFormat
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -72,7 +72,7 @@ class QwizFullPreviewFragment : Fragment(R.layout.fragment_qwiz_full_preview) {
 		}
 
 		binding.bDeleteQwiz.setOnClickListener {
-			val sharedPrefs = requireActivity().getSharedPreferences("user", MODE_PRIVATE)
+			val sharedPrefs = requireActivity().getSharedPreferences("user", MODE_MULTI_PROCESS)
 			sharedPrefs.getString("password", null)?.let {
 				viewModel.deleteQwiz(it)
 				binding.bDeleteQwiz.isEnabled = false
@@ -115,7 +115,7 @@ class QwizFullPreviewFragment : Fragment(R.layout.fragment_qwiz_full_preview) {
 
 				viewModel.getAccount(qwiz.creatorID)
 
-				val sharedPrefs = requireActivity().getSharedPreferences("user", MODE_PRIVATE)
+				val sharedPrefs = requireActivity().getSharedPreferences("user", MODE_MULTI_PROCESS)
 				if (qwiz.creatorID == sharedPrefs.getInt("id", -1) && viewModel.assignmentId < 0) {
 					binding.bDeleteQwiz.visibility = VISIBLE
 					binding.bDeleteQwiz.isEnabled = true

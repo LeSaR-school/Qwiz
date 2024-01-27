@@ -1,7 +1,7 @@
 package com.lesar.qwiz.fragment
 
 import android.app.AlertDialog
-import android.content.Context.MODE_PRIVATE
+import android.content.Context.MODE_MULTI_PROCESS
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Log
@@ -69,7 +69,7 @@ class ClassFragment : Fragment(R.layout.fragment_class) {
 		initClickListeners()
 		initObservers()
 
-		sharedPrefs = requireActivity().getSharedPreferences("user", MODE_PRIVATE)
+		sharedPrefs = requireActivity().getSharedPreferences("user", MODE_MULTI_PROCESS)
 		val id = sharedPrefs.getInt("id", -1)
 		if (id >= 0) {
 			sharedPrefs.getString("password", null)?.also {

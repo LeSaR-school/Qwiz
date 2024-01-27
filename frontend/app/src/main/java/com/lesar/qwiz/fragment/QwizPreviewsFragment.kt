@@ -1,7 +1,7 @@
 package com.lesar.qwiz.fragment
 
 import android.app.AlertDialog
-import android.content.Context.MODE_PRIVATE
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -38,16 +38,20 @@ class QwizPreviewsFragment : Fragment(R.layout.fragment_qwiz_previews) {
 
 		super.onViewCreated(view, savedInstanceState)
 
-		val sharedPreferences = requireActivity().getSharedPreferences("user", MODE_PRIVATE)
-		if (sharedPreferences.getString("password", null) != null) {
-			binding.fabCreateQwiz.isEnabled = true
-		}
-
 		initRecyclerView()
 		initClickListeners()
 		initObservers()
 
 		searchQwizes()
+
+	}
+
+	override fun onResume() {
+
+		super.onResume()
+		val sharedPreferences = requireActivity().getSharedPreferences("user", Context.MODE_MULTI_PROCESS)
+		val password = sharedPreferences.getString("password", null)
+		binding.fabCreateQwiz.isEnabled = password != null
 
 	}
 
